@@ -21,8 +21,10 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
       }
         # Visualize QC metrics as a violin plot
         # VlnPlot(PBMC.combined_QC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3) # from Seruat
-        VlnPlot.PBMC <- VlnPlot(PBMC.combined_QC, features = c("nGene", "nUMI", "mitoRatio"), ncol = 2,pt.size= PtSize)
-        FSplot1.PBMC <- FeatureScatter(PBMC.combined_QC, feature1 = "nUMI", feature2 = "nGene")
+        VlnPlot.PBMC <- VlnPlot(PBMC.combined_QC, features = c("nGene", "nUMI", "mitoRatio"), ncol = 2, pt.size= PtSize,
+                                group.by=colnames(metadata)[3+NAno])
+        FSplot1.PBMC <- FeatureScatter(PBMC.combined_QC, feature1 = "nUMI", feature2 = "nGene",
+                                       group.by=colnames(metadata)[3+NAno])
         VlnPlot.PBMC + FSplot1.PBMC
         
         
@@ -37,25 +39,30 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
         ## Cell counts
         # Visualize the number of cell counts per sample
         metadata %>% 
-          ggplot(aes(x=colnames(metadata)[3+NAno], fill=colnames(metadata)[3+NAno])) + 
+          ggplot(aes(x=metadata[,3+NAno], fill=metadata[,3+NAno])) + 
           geom_bar() +
           theme_classic() +
           theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),aspect.ratio=1) +
           theme(plot.title = element_text(hjust=0.5, face="bold")) +
-          ggtitle("NCells") -> NCells.BarPlot
+          ggtitle("NCells")+
+          labs(x = colnames(metadata)[3+NAno],
+               fill=colnames(metadata)[3+NAno]) -> NCells.BarPlot
         
         NCells.BarPlot
+        
         
         
         ## UMI counts (transcripts) per cell
         # Visualize the number UMIs/transcripts per cell
         metadata %>% 
-          ggplot(aes(color=colnames(metadata)[3+NAno], x=nUMI, fill= colnames(metadata)[3+NAno])) + 
+          ggplot(aes(color=metadata[,3+NAno], x=nUMI, fill= metadata[,3+NAno])) + 
           geom_density(alpha = 0.2) + 
           scale_x_log10() + 
           theme_classic() +
           ylab("Cell density") +
-          geom_vline(xintercept = nUMIFilter) -> Cell_density.UMIs.Plot
+          geom_vline(xintercept = nUMIFilter) +
+          labs(fill=colnames(metadata)[3+NAno],
+               colour=colnames(metadata)[3+NAno]) -> Cell_density.UMIs.Plot
         
         Cell_density.UMIs.Plot
         
@@ -63,23 +70,27 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
         ## Genes detected per cell
         # Visualize the distribution of genes detected per cell via histogram
         metadata %>% 
-          ggplot(aes(color=colnames(metadata)[3+NAno], x=nGene, fill= colnames(metadata)[3+NAno])) + 
+          ggplot(aes(color = metadata[,3+NAno], x=nGene, fill = metadata[,3+NAno])) + 
           geom_density(alpha = 0.2) + 
           theme_classic() +
           scale_x_log10() +
           ylab("Cell density") +
-          geom_vline(xintercept = nGeneFilter) ->  Cell_density.NGenes.Plot
+          geom_vline(xintercept = nGeneFilter)+
+          labs(fill=colnames(metadata)[3+NAno],
+               colour=colnames(metadata)[3+NAno]) ->  Cell_density.NGenes.Plot
         
         Cell_density.NGenes.Plot
         
         # Visualize the distribution of genes detected per cell via boxplot
         metadata %>% 
-          ggplot(aes(x=colnames(metadata)[3+NAno], y=log10(nGene), fill=colnames(metadata)[3+NAno])) + 
+          ggplot(aes(x = metadata[,3+NAno], y=log10(nGene), fill = metadata[,3+NAno])) + 
           geom_boxplot() + 
           theme_classic() +
           theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),aspect.ratio=1) +
           theme(plot.title = element_text(hjust=0.5, face="bold")) +
-          ggtitle("NCells vs NGenes") ->  NCvsNG.BarPlot
+          ggtitle("NCells vs NGenes") +
+          labs(fill=colnames(metadata)[3+NAno],
+               colour=colnames(metadata)[3+NAno]) ->  NCvsNG.BarPlot
         
         NCvsNG.BarPlot
         
@@ -97,7 +108,7 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
           theme_classic() +
           geom_vline(xintercept = nUMIFilter) +
           geom_hline(yintercept = nGeneFilter) +
-          facet_wrap(~colnames(metadata)[3+NAno]) -> FSplot
+          facet_wrap(colnames(metadata)[3+NAno]) -> FSplot
         
         FSplot
         
@@ -106,12 +117,14 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
         
         # Visualize the distribution of mitochondrial gene expression detected per cell
         metadata %>% 
-          ggplot(aes(color=colnames(metadata)[3+NAno], x=mitoRatio, fill=colnames(metadata)[3+NAno])) + 
+          ggplot(aes(color=metadata[,3+NAno], x=mitoRatio, fill=metadata[,3+NAno])) + 
           geom_density(alpha = 0.2) + 
           #scale_x_log10() + 
           theme_classic() +
           ylab("Cell density") +
-          geom_vline(xintercept = 0.1) ->  Cell_density.mitR.Plot
+          geom_vline(xintercept = 0.1) +
+          labs(fill=colnames(metadata)[3+NAno],
+               colour=colnames(metadata)[3+NAno]) ->  Cell_density.mitR.Plot
         
         Cell_density.mitR.Plot
         
@@ -119,10 +132,12 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
         ## Complexity
         # Visualize the overall complexity of the gene expression by visualizing the genes detected per UMI
         metadata %>%
-          ggplot(aes(x=log10GenesPerUMI, color = colnames(metadata)[3+NAno], fill=colnames(metadata)[3+NAno])) +
+          ggplot(aes(x=log10GenesPerUMI, color = metadata[,3+NAno], fill=metadata[,3+NAno])) +
           geom_density(alpha = 0.2) +
           theme_classic() +
-          geom_vline(xintercept = logGPUFilter) -> Cell_density.log10GenesPerUMI.Plot
+          geom_vline(xintercept = logGPUFilter)+
+          labs(fill=colnames(metadata)[3+NAno],
+               colour=colnames(metadata)[3+NAno])  -> Cell_density.log10GenesPerUMI.Plot
         
         Cell_density.log10GenesPerUMI.Plot
         
