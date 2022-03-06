@@ -55,7 +55,7 @@ BeautifyUMAP = function( P1,FileName = "NO1",RVer = Version,
   
   ## Export PDF
   pdf(
-    file = paste0(setwd(getwd()),"/",Version,"/UMAP",FileName,".pdf"),
+    file = paste0(getwd(),FileName,".pdf"),
     width = 12,  height = 8
   )
   print(P2)
@@ -65,12 +65,12 @@ BeautifyUMAP = function( P1,FileName = "NO1",RVer = Version,
   
   ## Export tiff
   tiff(
-    file = paste0(setwd(getwd()),"/",Version,"/UMAP",FileName,"01.tiff"), 
+    file = paste0(getwd(),FileName,"01.tiff"), 
     width = 28, height = 17, units = "cm", res = 200)
     print(P2)
    graphics.off()
   tiff(
-    file = paste0(setwd(getwd()),"/",Version,"/UMAP",FileName,"02.tiff"), 
+    file = paste0(getwd(),FileName,"02.tiff"), 
     width = 17, height = 17, units = "cm", res = 200)
    print(P3)
    graphics.off()
