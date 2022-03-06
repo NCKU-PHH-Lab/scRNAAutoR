@@ -59,6 +59,7 @@
   Save.Path = paste0(getwd(),"/",Version)
   dir.create(Save.Path)
   
+  ## Import information
   InputFolder = "Input_files_10x" 
   InputAnno = "PBMC_Ano.csv"
   ProjectName = "CC"
@@ -131,7 +132,7 @@
   dir.create(paste0(Save.Path,"/",ProjectName,"_QC"))
   
   ## QC for all samples
-  scRNA.SeuObj_Ori <- scRNA.SeuObj # Save the original obj
+  scRNA_Ori.SeuObj <- scRNA.SeuObj # Save the original obj
   #Test# scRNA.SeuObj_Ori.list <- SplitObject(scRNA.SeuObj_Ori, split.by = "ID")
   scRNA.SeuObj_QCTry <- scRNAQC(scRNA.SeuObj,FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_QCTry"))
   rm(scRNA.anchors,scRNA.SeuObj,scRNA.SeuObj_QCTry)
@@ -217,7 +218,7 @@
   print(scRNA.SeuObj[["pca"]], dims = 1:5, nfeatures = 5)
   
   pdf(
-    file = paste0(getwd(),"/",Version,"/",ProjectName,"_Clusters/",ProjectName,"_PCA.pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_Clusters/",ProjectName,"_PCA.pdf"),
     width = 10,  height = 8
   )
     VizDimLoadings(scRNA.SeuObj, dims = 1:2, reduction = "pca")
@@ -265,7 +266,7 @@
   DimPlot(scRNA.SeuObj, reduction = "umap", group.by = colnames(list_files.df)[3] ) %>% BeautifyggPlot(.,LegPos = c(0.85, 0.15),AxisTitleSize=1.1)
   
   pdf(
-    file = paste0(getwd(),"/",Version,"/",ProjectName,"_Clusters/",ProjectName,"_nlDR_Cluster.pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_Clusters/",ProjectName,"_nlDR_Cluster.pdf"),
     width = 12,  height = 8
   )
     
@@ -297,10 +298,70 @@
   save.image(paste0(Save.Path,"/04_Perform_an_integrated_analysis.RData"))        
   
   ##### Meta Table  #####
+
+    Meta.df <- data.frame(matrix(nrow = 0,ncol = 3))
+    colnames(Meta.df) <- c("Folder","Cell_Num","Gene_Num")
+
+    ## Before QC
+    for (i in 1:length(scRNA_SeuObj.list)) {
+      Meta.df[i,1] <- names(scRNA_SeuObj.list[i])
+      Meta.df[i,2] <- ncol(scRNA_SeuObj.list[[i]]@assays[["RNA"]]@counts)
+      Meta.df[i,3] <- nrow(scRNA_SeuObj.list[[i]]@assays[["RNA"]]@counts)
+      
+    }
+
+      # Summary to Meta table
+      Meta.df[i+1,1] <- c("Summary")
+      Meta.df[i+1,2] <- ncol(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
+      Meta.df[i+1,3] <- nrow(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
+    
+    ## After QC
+    for (j in 1:length(scRNA_SeuObj_QC.list)) {
+      Meta.df[i+j+1,1] <- paste0(names(scRNA_SeuObj_QC.list[j]),".QC")
+      Meta.df[i+j+1,2] <- ncol(scRNA_SeuObj_QC.list[[j]]@assays[["RNA"]]@counts)
+      Meta.df[i+j+1,3] <- nrow(scRNA_SeuObj_QC.list[[j]]@assays[["RNA"]]@counts)
+      
+    }
+    
+      # Summary to Meta table
+      Meta.df[i+j+2,1] <- c("Summary.QC")
+      Meta.df[i+j+2,2] <- ncol(scRNA.SeuObj@assays[["RNA"]]@counts)
+      Meta.df[i+j+2,3] <- nrow(scRNA.SeuObj@assays[["RNA"]]@counts)
+      
+    
+    rm(i,j)
+    
+    Meta.df <- left_join(Meta.df,list_files.df, by = "Folder")
+    Meta.df[is.na(Meta.df)] <- ""
+
+## Export data        
+write.table( Meta.df ,
+             file = paste0(Save.Path,"/",ProjectName,"_CellCount_Meta.tsv"),
+             sep = "\t",
+             quote = F,
+             row.names = F
+)
   
+    
+    # ## Before QC    
+    #   ID <- unique(scRNA_Ori.SeuObj@meta.data[["SampleID"]])
+    #   
+    #   for (j in 1:length(ID)) {
+    #     scRNA_Ori_Sub.SeuObj <- scRNA_Ori.SeuObj[,scRNA_Ori.SeuObj@meta.data[["SampleID"]] %in% ID[j]] 
+    #     Meta.df[j,1] <- ID[j]  # TN138
+    #     Meta.df[j,2] <- ncol(scRNA_Ori_Sub.SeuObj@assays[["RNA"]]@counts)
+    #     Meta.df[j,3] <- nrow(scRNA_Ori_Sub.SeuObj@assays[["RNA"]]@counts)
+    #     
+    #   }
+    #   rm(j,scRNA_Ori_Sub.SeuObj)
+    
+    
+    
+    
     ## Before QC
     Meta.df <- data.frame(matrix(nrow = 0,ncol = 3))
     colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
+    
     Meta.df[1,1] <- c("EO.M")  # TN138
     Meta.df[1,2] <- ncol(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
     Meta.df[1,3] <- nrow(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
@@ -341,7 +402,7 @@
     Meta.df[9,3] <- nrow(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
     
     # Summary to Meta table
-    Meta.df[10,1] <- c("Summary")
+    Meta.df[10,1] <- c("Summary.QC")
     Meta.df[10,2] <- ncol(scRNA.SeuObj@assays[["RNA"]]@counts)
     Meta.df[10,3] <- nrow(scRNA.SeuObj@assays[["RNA"]]@counts)
   
@@ -355,6 +416,9 @@
   
   
 ##### 05 Identify conserved cell type markers  ##### 
+  ## Creative Cell type folder
+  dir.create(paste0(Save.Path,"/",ProjectName,"_CT"))
+  
   ## Identify conserved cell type markers
   # find markers for every cluster compared to all remaining cells, report only the positive ones
   set.seed(1) # Fix the seed
@@ -371,13 +435,15 @@
     top_n(n = top_NSet, wt = avg_log2FC) -> top_N
   scRNA.SeuObj <- ScaleData(scRNA.SeuObj, verbose = FALSE)
   DoHeatmap(scRNA.SeuObj, features = top_N$gene) + NoLegend()
-  write.table(top_N, file=paste0(Save.Path,"/PBMC_ClusterMarker_top",top_NSet,"Gene.txt"),sep="\t", row.names=T
+  
+
+  write.table(top_N, file=paste0(Save.Path,"/",ProjectName,"_Clusters/",ProjectName,"_ClusterMarker_top",top_NSet,"Gene.txt"),sep="\t", row.names=T
               , quote = FALSE)
-  write.table(PBMC.markers, file=paste0(Save.Path,"/PBMC_ClusterMarker_AllGene.txt"),sep="\t", row.names=T
+  write.table(PBMC.markers, file=paste0(Save.Path,"/",ProjectName,"_Clusters/",ProjectName,"_ClusterMarker_AllGene.txt"),sep="\t", row.names=T
               , quote = FALSE)
   
   pdf(
-    file = paste0(Save.Path,"/PBMC_Heatmap_Cluster_top",top_NSet,".pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_Clusters/",ProjectName,"_Heatmap_Cluster_top",top_NSet,".pdf"),
     width = 10,  height = 8
   )
     DoHeatmap(scRNA.SeuObj, features = top_N$gene,size = 2,angle = 60) +
@@ -391,7 +457,7 @@
   # --------------- Check specific tissue marker --------------- #
    
   pdf(
-    file = paste0(setwd(getwd()),"/",Version,"/",ProjectName,"_DR/",ProjectName,"_nlDR_CTMarker.pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_CT/",ProjectName,"_nlDR_CTMarker.pdf"),
     width = 10,  height = 8
   )
   
@@ -462,11 +528,9 @@
   
   dev.off()
   
-  save.image(paste0(Save.Path,"/05_Identify_conserved_cell_type_markers.RData"))  
+save.image(paste0(Save.Path,"/05_Identify_conserved_cell_type_markers.RData"))  
   
 ##### 06 Cell type annotation  #####
-  ## Creative Cell type folder
-  dir.create(paste0(Save.Path,"/",ProjectName,"_CT"))
   # scRNA.SeuObj.copy <- scRNA.SeuObj
   
   ## CD4+T: CD4+T Cell; CD8+T: CD8+T Cell; T: T Cell; B: B Cell; Mac: Macrophages;
@@ -486,16 +550,16 @@
   Heatmap_Color.lt <- list(low="#5283ff",mid ="white", high ="#ff5c5c")
   
   pdf(
-    file = paste0(Save.Path,"/PBMC_Heatmap_CellType_top",top_NSet,".pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_CT/",ProjectName,"_Heatmap_CellType_top",top_NSet,".pdf"),
     width = 10,  height = 8
   )
-  DoHeatmap(scRNA.SeuObj, features = top_N$gene,size = 3,angle = 60) +
-    scale_fill_gradient2(low = Heatmap_Color.lt[["low"]],
-                         mid = Heatmap_Color.lt[["mid"]], 
-                         high = Heatmap_Color.lt[["high"]]) +
-    theme(axis.text.y = element_text(size  = 5)) +
-    theme(legend.position = "bottom")+
-    theme(aspect.ratio=1)
+    DoHeatmap(scRNA.SeuObj, features = top_N$gene,size = 3,angle = 60) +
+      scale_fill_gradient2(low = Heatmap_Color.lt[["low"]],
+                           mid = Heatmap_Color.lt[["mid"]], 
+                           high = Heatmap_Color.lt[["high"]]) +
+      theme(axis.text.y = element_text(size  = 5)) +
+      theme(legend.position = "bottom")+
+      theme(aspect.ratio=1)
   dev.off()
   
   # ## Ch
@@ -515,15 +579,15 @@
   DoHeatmap(scRNA.SeuObj, features = top_N$gene,group.by = "seurat_clusters",size = 3,angle = 90) + NoLegend()
   
   pdf( 
-    file = paste0(Save.Path,"/PBMC_Heatmap_CellType_top",top_NSet,".pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_CT/",ProjectName,"_Heatmap_CellType_top",top_NSet,".pdf"),
     width = 10,  height = 8
   )
-  DoHeatmap(scRNA.SeuObj, features = top_N$gene,group.by = "celltype",size = 2,angle = 45) +
-    scale_fill_gradient2(low = Heatmap_Color.lt[["low"]],
-                         mid = Heatmap_Color.lt[["mid"]], 
-                         high = Heatmap_Color.lt[["high"]])  +
-    theme(axis.text.y = element_text(size = 5)) +
-    theme(legend.position = "bottom" )
+    DoHeatmap(scRNA.SeuObj, features = top_N$gene,group.by = "celltype",size = 2,angle = 45) +
+      scale_fill_gradient2(low = Heatmap_Color.lt[["low"]],
+                           mid = Heatmap_Color.lt[["mid"]], 
+                           high = Heatmap_Color.lt[["high"]])  +
+      theme(axis.text.y = element_text(size = 5)) +
+      theme(legend.position = "bottom" )
   
   dev.off()
   
@@ -532,14 +596,14 @@
   
   DimPlot(scRNA.SeuObj,group.by = "celltype",label.size = 7,label = TRUE,  
           pt.size =2) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_CellType"))
-  DimPlot(scRNA.SeuObj,group.by = "sample",  
-          pt.size =0.5) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_Sample"))
+  DimPlot(scRNA.SeuObj,group.by = colnames(list_files.df)[2],  
+          pt.size =0.5) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_",colnames(list_files.df)[2]))
   DimPlot(scRNA.SeuObj,group.by = "seurat_clusters",label.size = 7, label = TRUE,  
-          pt.size =1) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_Clusters"))
+          pt.size =1) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_Clusters/",ProjectName,"_nlDR_Clusters"))
   
 
   pdf(
-    file = paste0(getwd(),"/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_CellType_Sup.pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_CT/",ProjectName,"_nlDR_CellType_Sup.pdf"),
     width = 12,  height = 8
   )
   
@@ -567,16 +631,14 @@
   
   dev.off()
   
-  
-  
-  
+
   ## DotPlot
   DotPlot_Color1.set <- c("#de3767", "#de3767", "#4169e1", "#4169e1")
   DotPlot_Color2.set <- c("#5b8e7d","#7b2cbf")
   DotPlot_Color3.set <- c("#de3767", "#4169e1")
   
   pdf( 
-    file = paste0(Save.Path,"/PBMC_DotPlot_CellType",".pdf"),
+    file = paste0(Save.Path,"/",ProjectName,"_CT/",ProjectName,"_DotPlot_CellType",".pdf"),
     width = 10,  height = 8
   )
   
@@ -601,7 +663,7 @@
   
   rm(top_N, top_NSet)
   
-  save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
+save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
   
   # ##### Export marker gene from specific cluster #####
   #   # For performing differential expression after integration, we switch back to the original data
@@ -1465,5 +1527,11 @@
   
   
   
+  
+  
+  
+##### inferCNV #####
+  
+##### Deconvolution #####
   
   
