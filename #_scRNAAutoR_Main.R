@@ -78,9 +78,12 @@
   # Nfiles = length(list_files.set)
 
   #### Cachexia
+  
+  ## Annotation table
   list_files.df <- read.csv(paste0(InputFolder,"/",InputAnno))
   Feature.set <- colnames(list_files.df)[-1]
   
+  ## Read 10x files
   scRNA_SeuObj.list <- list()
   for(i in 1:nrow(list_files.df)){
     Folder <- list_files.df$Folder[i]
@@ -99,7 +102,7 @@
 
 ##### 01 Combine different datasets before QC  #####  
 
-    # normalize and identify variable features for each dataset independently
+  # normalize and identify variable features for each dataset independently
   set.seed(1) # Fix the seed
   scRNA_SeuObj.list <- lapply(X = scRNA_SeuObj.list, FUN = function(x) {
     x <- NormalizeData(x)
@@ -124,25 +127,23 @@
   
     
 ##### 02 Quality Control  #####
+  ## Creative QC folder
   dir.create(paste0(Save.Path,"/",ProjectName,"_QC"))
+  
   ## QC for all samples
   scRNA.SeuObj_Ori <- scRNA.SeuObj # Save the original obj
   #Test# scRNA.SeuObj_Ori.list <- SplitObject(scRNA.SeuObj_Ori, split.by = "ID")
   scRNA.SeuObj_QCTry <- scRNAQC(scRNA.SeuObj,FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_QCTry"))
+  rm(scRNA.anchors,scRNA.SeuObj,scRNA.SeuObj_QCTry)
   
   # specify that we will perform downstream analysis on the corrected data note that the
   # original unmodified data still resides in the 'RNA' assay
-  
-  rm(scRNA.anchors,scRNA.SeuObj)
-  
+
   ## QC for each sample for the new integration
   scRNA_SeuObj_QC.list <- list()
   for (i in 1:length(scRNA_SeuObj.list)) {
     
-    # scRNA_SeuObj.list[[i]] <- Data.SeuObj
-    # names(scRNA_SeuObj_QC.list)[[i]] <- names
     Name <- names(scRNA_SeuObj.list)[[i]]
-    
     scRNA_SeuObj_QC.list[[i]] <- scRNAQC(scRNA_SeuObj.list[[i]],
                                          FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_", Name,"_QC"))
     names(scRNA_SeuObj_QC.list)[[i]] <- Name  
@@ -180,6 +181,9 @@
   save.image(paste0(Save.Path,"/03_Combine_different_data_sets_after_QC.RData"))      
   
 ##### 04 Perform an integrated analysis #####
+  ## Creative Clusters folder
+  dir.create(paste0(Save.Path,"/",ProjectName,"_Clusters"))
+  
   # Run the standard workflow for visualization and clustering
   
   # # # !!
@@ -213,23 +217,23 @@
   print(scRNA.SeuObj[["pca"]], dims = 1:5, nfeatures = 5)
   
   pdf(
-    file = paste0(setwd(getwd()),"/",Version,"/PBMC_PCA.pdf"),
+    file = paste0(getwd(),"/",Version,"/",ProjectName,"_Clusters/",ProjectName,"_PCA.pdf"),
     width = 10,  height = 8
   )
-  VizDimLoadings(scRNA.SeuObj, dims = 1:2, reduction = "pca")
-  DimPlot(scRNA.SeuObj, reduction = "pca")
-  DimHeatmap(scRNA.SeuObj, dims = 1, cells = 500, balanced = TRUE)
-  DimHeatmap(scRNA.SeuObj, dims = 1:15, cells = 500, balanced = TRUE)
-  DimHeatmap(scRNA.SeuObj, dims = 16:30, cells = 500, balanced = TRUE)
-  
-  # # Determine the 'dimensionality' of the dataset
-  # # NOTE: This process can take a long time for big datasets, comment out for expediency. More
-  # # approximate techniques such as those implemented in ElbowPlot() can be used to reduce
-  # # computation time
-  # scRNA.SeuObj <- JackStraw(scRNA.SeuObj, num.replicate = 100)
-  # scRNA.SeuObj <- ScoreJackStraw(scRNA.SeuObj, dims = 1:20)
-  # JackStrawPlot(scRNA.SeuObj, dims = 1:20)
-  ElbowPlot(scRNA.SeuObj, ndims = 50)
+    VizDimLoadings(scRNA.SeuObj, dims = 1:2, reduction = "pca")
+    DimPlot(scRNA.SeuObj, reduction = "pca")
+    DimHeatmap(scRNA.SeuObj, dims = 1, cells = 500, balanced = TRUE)
+    DimHeatmap(scRNA.SeuObj, dims = 1:15, cells = 500, balanced = TRUE)
+    DimHeatmap(scRNA.SeuObj, dims = 16:30, cells = 500, balanced = TRUE)
+    
+    # # Determine the 'dimensionality' of the dataset
+    # # NOTE: This process can take a long time for big datasets, comment out for expediency. More
+    # # approximate techniques such as those implemented in ElbowPlot() can be used to reduce
+    # # computation time
+    # scRNA.SeuObj <- JackStraw(scRNA.SeuObj, num.replicate = 100)
+    # scRNA.SeuObj <- ScoreJackStraw(scRNA.SeuObj, dims = 1:20)
+    # JackStrawPlot(scRNA.SeuObj, dims = 1:20)
+    ElbowPlot(scRNA.SeuObj, ndims = 50)
   dev.off()
   
   ElbowPlot(scRNA.SeuObj, ndims = 50)
@@ -258,91 +262,92 @@
   
   
   ## Visualization
-  DimPlot(scRNA.SeuObj, reduction = "umap", group.by = "sample") %>% BeautifyggPlot(.,LegPos = c(0.85, 0.15),AxisTitleSize=1.1)
+  DimPlot(scRNA.SeuObj, reduction = "umap", group.by = colnames(list_files.df)[3] ) %>% BeautifyggPlot(.,LegPos = c(0.85, 0.15),AxisTitleSize=1.1)
   
   pdf(
-    file = paste0(setwd(getwd()),"/",Version,"/PBMC_nlDR_Cluster.pdf"),
-    width = 10,  height = 8
+    file = paste0(getwd(),"/",Version,"/",ProjectName,"_Clusters/",ProjectName,"_nlDR_Cluster.pdf"),
+    width = 12,  height = 8
   )
+    
+    DimPlot(scRNA.SeuObj, reduction = "umap", label = TRUE, label.size = 7, repel = TRUE) %>% 
+      BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, LegTextSize = 14)
   
-  DimPlot(scRNA.SeuObj, reduction = "umap", group.by = "sample") %>% 
-    BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.85, 0.15),AxisTitleSize=1.2, LegTextSize = 18)
-  DimPlot(scRNA.SeuObj, reduction = "umap", label = TRUE, label.size = 7, repel = TRUE) %>% BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, LegTextSize = 14)
-  
-  DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2,split.by = "sample", label = TRUE, label.size = 4) %>% 
-    BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
-                   SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9)
-  
-  DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2,split.by = "Cachexia", label = TRUE, label.size = 4) %>% 
-    BeautifyggPlot(.,LegPos = "top",AxisTitleSize=1.2, TitleSize = 20,
-                   LegDir = "horizontal",SubTitSize = 17 , LegTextSize = 14, XaThick=1, YaThick=1)
-  DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2,split.by = "Sex", label = TRUE, label.size = 4) %>% 
-    BeautifyggPlot(.,LegPos = "top",AxisTitleSize=1.2, TitleSize = 20,
-                   LegDir = "horizontal",SubTitSize = 17 , LegTextSize = 14, XaThick=1, YaThick=1)
-  
-  ## tSNE
-  DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = "sample") %>% 
-    BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.85, 0.15),AxisTitleSize=1.2, LegTextSize = 18)
-  
+   
+    for (i in 1:(ncol(list_files.df)-1)) {
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", group.by = colnames(list_files.df)[i+1]) %>% 
+            BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
+              theme(plot.title = element_text(vjust = 0.85)))
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+              BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
+                             SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
+      
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = colnames(list_files.df)[i+1]) %>% 
+              BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
+              theme(plot.title = element_text(vjust = 0.85)))
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+              BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
+                             SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
+      
+    }
+    rm(i)
+
   dev.off()
   # graphics.off()
-  
-  rm(PBMC.TN138_QC, PBMC.TN139_QC, PBMC.TN146_QC, PBMC.TN148_QC,scRNA.SeuObj_QCTry)
   
   save.image(paste0(Save.Path,"/04_Perform_an_integrated_analysis.RData"))        
   
   ##### Meta Table  #####
   
-  ## Before QC
-  Meta.df <- data.frame(matrix(nrow = 0,ncol = 3))
-  colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
-  Meta.df[1,1] <- c("EO.M")  # TN138
-  Meta.df[1,2] <- ncol(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
-  Meta.df[1,3] <- nrow(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
-  
-  Meta.df[2,1] <- c("LO.M")  # TN139
-  Meta.df[2,2] <- ncol(scRNA_SeuObj.list[[2]]@assays[["RNA"]]@counts)
-  Meta.df[2,3] <- nrow(scRNA_SeuObj.list[[2]]@assays[["RNA"]]@counts)
-  
-  Meta.df[3,1] <- c("LO.F")  # TN146
-  Meta.df[3,2] <- ncol(scRNA_SeuObj.list[[3]]@assays[["RNA"]]@counts)
-  Meta.df[3,3] <- nrow(scRNA_SeuObj.list[[3]]@assays[["RNA"]]@counts)
-  
-  Meta.df[4,1] <- c("EO.F")  # TN148
-  Meta.df[4,2] <- ncol(scRNA_SeuObj.list[[4]]@assays[["RNA"]]@counts)
-  Meta.df[4,3] <- nrow(scRNA_SeuObj.list[[4]]@assays[["RNA"]]@counts)
-  
-  # Summary to Meta table
-  Meta.df[5,1] <- c("Summary")
-  Meta.df[5,2] <- ncol(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
-  Meta.df[5,3] <- nrow(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
-  
-  ## After QC
-  colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
-  Meta.df[6,1] <- c("EO.M.QC")  # TN138
-  Meta.df[6,2] <- ncol(scRNA_SeuObj_QC.list[[1]]@assays[["RNA"]]@counts)
-  Meta.df[6,3] <- nrow(scRNA_SeuObj_QC.list[[1]]@assays[["RNA"]]@counts)
-  
-  Meta.df[7,1] <- c("LO.M.QC")  # TN139
-  Meta.df[7,2] <- ncol(scRNA_SeuObj_QC.list[[2]]@assays[["RNA"]]@counts)
-  Meta.df[7,3] <- nrow(scRNA_SeuObj_QC.list[[2]]@assays[["RNA"]]@counts)
-  
-  Meta.df[8,1] <- c("LO.F.QC")  # TN146
-  Meta.df[8,2] <- ncol(scRNA_SeuObj_QC.list[[3]]@assays[["RNA"]]@counts)
-  Meta.df[8,3] <- nrow(scRNA_SeuObj_QC.list[[3]]@assays[["RNA"]]@counts)
-  
-  Meta.df[9,1] <- c("EO.F.QC")  # TN148
-  Meta.df[9,2] <- ncol(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
-  Meta.df[9,3] <- nrow(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
-  
-  # Summary to Meta table
-  Meta.df[10,1] <- c("Summary")
-  Meta.df[10,2] <- ncol(scRNA.SeuObj@assays[["RNA"]]@counts)
-  Meta.df[10,3] <- nrow(scRNA.SeuObj@assays[["RNA"]]@counts)
+    ## Before QC
+    Meta.df <- data.frame(matrix(nrow = 0,ncol = 3))
+    colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
+    Meta.df[1,1] <- c("EO.M")  # TN138
+    Meta.df[1,2] <- ncol(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
+    Meta.df[1,3] <- nrow(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
+    
+    Meta.df[2,1] <- c("LO.M")  # TN139
+    Meta.df[2,2] <- ncol(scRNA_SeuObj.list[[2]]@assays[["RNA"]]@counts)
+    Meta.df[2,3] <- nrow(scRNA_SeuObj.list[[2]]@assays[["RNA"]]@counts)
+    
+    Meta.df[3,1] <- c("LO.F")  # TN146
+    Meta.df[3,2] <- ncol(scRNA_SeuObj.list[[3]]@assays[["RNA"]]@counts)
+    Meta.df[3,3] <- nrow(scRNA_SeuObj.list[[3]]@assays[["RNA"]]@counts)
+    
+    Meta.df[4,1] <- c("EO.F")  # TN148
+    Meta.df[4,2] <- ncol(scRNA_SeuObj.list[[4]]@assays[["RNA"]]@counts)
+    Meta.df[4,3] <- nrow(scRNA_SeuObj.list[[4]]@assays[["RNA"]]@counts)
+    
+    # Summary to Meta table
+    Meta.df[5,1] <- c("Summary")
+    Meta.df[5,2] <- ncol(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
+    Meta.df[5,3] <- nrow(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
+    
+    ## After QC
+    colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
+    Meta.df[6,1] <- c("EO.M.QC")  # TN138
+    Meta.df[6,2] <- ncol(scRNA_SeuObj_QC.list[[1]]@assays[["RNA"]]@counts)
+    Meta.df[6,3] <- nrow(scRNA_SeuObj_QC.list[[1]]@assays[["RNA"]]@counts)
+    
+    Meta.df[7,1] <- c("LO.M.QC")  # TN139
+    Meta.df[7,2] <- ncol(scRNA_SeuObj_QC.list[[2]]@assays[["RNA"]]@counts)
+    Meta.df[7,3] <- nrow(scRNA_SeuObj_QC.list[[2]]@assays[["RNA"]]@counts)
+    
+    Meta.df[8,1] <- c("LO.F.QC")  # TN146
+    Meta.df[8,2] <- ncol(scRNA_SeuObj_QC.list[[3]]@assays[["RNA"]]@counts)
+    Meta.df[8,3] <- nrow(scRNA_SeuObj_QC.list[[3]]@assays[["RNA"]]@counts)
+    
+    Meta.df[9,1] <- c("EO.F.QC")  # TN148
+    Meta.df[9,2] <- ncol(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
+    Meta.df[9,3] <- nrow(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
+    
+    # Summary to Meta table
+    Meta.df[10,1] <- c("Summary")
+    Meta.df[10,2] <- ncol(scRNA.SeuObj@assays[["RNA"]]@counts)
+    Meta.df[10,3] <- nrow(scRNA.SeuObj@assays[["RNA"]]@counts)
   
   
   write.table( Meta.df ,
-               file = paste0(Save.Path,"/PBMC_CellCount_Meta.tsv"),
+               file = paste0(Save.Path,"/",ProjectName,"_CellCount_Meta.tsv"),
                sep = "\t",
                quote = F,
                row.names = F
@@ -375,84 +380,84 @@
     file = paste0(Save.Path,"/PBMC_Heatmap_Cluster_top",top_NSet,".pdf"),
     width = 10,  height = 8
   )
-  DoHeatmap(scRNA.SeuObj, features = top_N$gene,size = 2,angle = 60) +
-    scale_fill_gradient2(low="#5283ff",mid ="white", high ="#ff5c5c") +
-    theme(axis.text.y = element_text(size  = 5)) +
-    theme(legend.position = "bottom" )
-  
+    DoHeatmap(scRNA.SeuObj, features = top_N$gene,size = 2,angle = 60) +
+      scale_fill_gradient2(low="#5283ff",mid ="white", high ="#ff5c5c") +
+      theme(axis.text.y = element_text(size  = 5)) +
+      theme(legend.position = "bottom" )
+    
   dev.off()
   
   
   # --------------- Check specific tissue marker --------------- #
-  
+   
   pdf(
-    file = paste0(setwd(getwd()),"/",Version,"/PBMC_nlDR_CTMarker.pdf"),
+    file = paste0(setwd(getwd()),"/",Version,"/",ProjectName,"_DR/",ProjectName,"_nlDR_CTMarker.pdf"),
     width = 10,  height = 8
   )
   
-  # PMID: 31771616 #!!!!!!
-  FeaturePlot(scRNA.SeuObj, features = c("Cd3d", "Cd4", "Cd8a", "Csf1r", "Foxp3", "S100a9"), min.cutoff = "q9",
-              ncol = 3, coord.fixed = 1)
-  # T Cell: Cd3d;  CD4+ T Cell: Cd4; CD8+ T Cell: Cd8a; Macrophages: Csf1r; regulatory T cells(Treg): Foxp3; Neutrophils: S100a9
-  
-  # PMID: 34296197 #!!!!!
-  FeaturePlot(scRNA.SeuObj, features = c("Cd3d", "Cd3e", "Lyz1", "Lyz2","Clu","Cd79a","Ms4a1","Nkg7","Gzmb"), min.cutoff = "q9",
-              ncol = 3, coord.fixed = 1)
-  # T Cell: Cd3d,Cd3e;  Macrophages: Lyz; Mast Cell: Clu; B Cell: Cd79a,Ms4a1; NK Cell: Nkg7,Gzmb
-  
-  # http://biocc.hrbmu.edu.cn/CellMarker/
-  # Mast cell
-  FeaturePlot(scRNA.SeuObj, features = c("Cd117", "Cd25","Cd203c","Slc18a2","Kit","Fcer1a","Cd9"), min.cutoff = "q9", coord.fixed = 1)
-  # PMID: 30356731
-  FeaturePlot(scRNA.SeuObj, features = c("Cd9"), min.cutoff = "q9", coord.fixed = 1)
-  # PMID: 34296197 #!!!!!
-  FeaturePlot(scRNA.SeuObj, features = c("Cpa3"), min.cutoff = "q9", coord.fixed = 1)
-  # https://www.panglaodb.se/markers.html?cell_type=%27Mast%20cells%27
-  
-  ## Mac
-  # Macrophage-Markers
-  # https://www.biocompare.com/Editorial-Articles/566347-A-Guide-to-Macrophage-Markers/
-  ## M0
-  FeaturePlot(scRNA.SeuObj, features = c("Cd68", "Adgre1","Cd14","Csf1r","Ly6c1",
-                                          "Cx3cr1","Fcgr1a","Itgam","Mertk"), min.cutoff = "q9", coord.fixed = 1)
-  
-  ## M1
-  # M1 http://biocc.hrbmu.edu.cn/CellMarker/
-  FeaturePlot(scRNA.SeuObj, features = c("Cd16","Cd32","Cd64","Cd68","Cd80","Cd86"), min.cutoff = "q9", coord.fixed = 1)
-  # M1 https://www.biocompare.com/Editorial-Articles/566347-A-Guide-to-Macrophage-Markers/
-  FeaturePlot(scRNA.SeuObj, features = c("Marco","Nos2","Tlr2","Cd80","Cd86","Csf2",
-                                          "Tnf","Il1b","Il6","Tlr4","Cxcl2","Ifng","Il1r1"), min.cutoff = "q9", coord.fixed = 1)
-  FeaturePlot(scRNA.SeuObj, features = c("Il1a","Il1b","Il6","Nos2","Tlr2","Tlr4","Cd80","Cd86"), min.cutoff = "q9", coord.fixed = 1)
-  
-  
-  ## M2
-  # M2 http://biocc.hrbmu.edu.cn/CellMarker/
-  FeaturePlot(scRNA.SeuObj, features = c("Chil3","Csf1r","Mrc1","Pparg","Arg1","Cd163","Clec10a","Clec7a",
-                                          "Cd206","Cd209","Ccl18","Fizz1"), min.cutoff = "q9", coord.fixed = 1)
-  # https://www.biocompare.com/Editorial-Articles/566347-A-Guide-to-Macrophage-Markers/
-  FeaturePlot(scRNA.SeuObj, features = c("Cd115", "Cd206", "Pparg", "Arg1", "Cd163", "Cd301", 
-                                          "Dectin-1", "Pdcd1lg2", "Fizz1"), min.cutoff = "q9", coord.fixed = 1)
-  
-  FeaturePlot(scRNA.SeuObj, features = c("Chil3"), min.cutoff = "q9", coord.fixed = 1)
-  
-  
-  
-  ## Tumor associated macrophage(TAM)
-  FeaturePlot(scRNA.SeuObj, features = c("Ccr2","Csf1r","Marco","Pdl2","Cd40","Ccl2","Csf1","Cd16"), 
-              min.cutoff = "q9", coord.fixed = 1)
-  
-  # Erythrocytes
-  FeaturePlot(scRNA.SeuObj, features = c("Hbb-bs"), min.cutoff = "q9", coord.fixed = 1)
-  # Platelet 
-  FeaturePlot(scRNA.SeuObj, features = c("Ppbp"), min.cutoff = "q9", coord.fixed = 1)
-  
-  ## Summary
-  markers.to.plot <- c("Cd3d","Cd3e", "Cd4","Cd8a", "Csf1r", "Lyz2","Chil3","Il1b", "S100a9","Nkg7",
-                       "Gzmb", "Cd79a", "Ms4a1","Clu","Hbb-bs","Ppbp")
-  
-  FeaturePlot(scRNA.SeuObj, features = markers.to.plot, min.cutoff = "q9", coord.fixed = 1)
-  # T Cell: Cd3d,Cd3e;  CD4+ T Cell: Cd4; CD8+ T Cell: Cd8a; Macrophages: Csf1r,Lyz,Chil3;  Neutrophils: S100a9; 
-  # NK Cell: Nkg7,Gzmb; B Cell: Cd79a,Ms4a1; Mast Cell: Clu; Erythrocytes: Hbb-bs; Platelet: Ppbp
+    # PMID: 31771616 #!!!!!!
+    FeaturePlot(scRNA.SeuObj, features = c("Cd3d", "Cd4", "Cd8a", "Csf1r", "Foxp3", "S100a9"), min.cutoff = "q9",
+                ncol = 3, coord.fixed = 1)
+    # T Cell: Cd3d;  CD4+ T Cell: Cd4; CD8+ T Cell: Cd8a; Macrophages: Csf1r; regulatory T cells(Treg): Foxp3; Neutrophils: S100a9
+    
+    # PMID: 34296197 #!!!!!
+    FeaturePlot(scRNA.SeuObj, features = c("Cd3d", "Cd3e", "Lyz1", "Lyz2","Clu","Cd79a","Ms4a1","Nkg7","Gzmb"), min.cutoff = "q9",
+                ncol = 3, coord.fixed = 1)
+    # T Cell: Cd3d,Cd3e;  Macrophages: Lyz; Mast Cell: Clu; B Cell: Cd79a,Ms4a1; NK Cell: Nkg7,Gzmb
+    
+    # http://biocc.hrbmu.edu.cn/CellMarker/
+    # Mast cell
+    FeaturePlot(scRNA.SeuObj, features = c("Cd117", "Cd25","Cd203c","Slc18a2","Kit","Fcer1a","Cd9"), min.cutoff = "q9", coord.fixed = 1)
+    # PMID: 30356731
+    FeaturePlot(scRNA.SeuObj, features = c("Cd9"), min.cutoff = "q9", coord.fixed = 1)
+    # PMID: 34296197 #!!!!!
+    FeaturePlot(scRNA.SeuObj, features = c("Cpa3"), min.cutoff = "q9", coord.fixed = 1)
+    # https://www.panglaodb.se/markers.html?cell_type=%27Mast%20cells%27
+    
+    ## Mac
+    # Macrophage-Markers
+    # https://www.biocompare.com/Editorial-Articles/566347-A-Guide-to-Macrophage-Markers/
+    ## M0
+    FeaturePlot(scRNA.SeuObj, features = c("Cd68", "Adgre1","Cd14","Csf1r","Ly6c1",
+                                            "Cx3cr1","Fcgr1a","Itgam","Mertk"), min.cutoff = "q9", coord.fixed = 1)
+    
+    ## M1
+    # M1 http://biocc.hrbmu.edu.cn/CellMarker/
+    FeaturePlot(scRNA.SeuObj, features = c("Cd16","Cd32","Cd64","Cd68","Cd80","Cd86"), min.cutoff = "q9", coord.fixed = 1)
+    # M1 https://www.biocompare.com/Editorial-Articles/566347-A-Guide-to-Macrophage-Markers/
+    FeaturePlot(scRNA.SeuObj, features = c("Marco","Nos2","Tlr2","Cd80","Cd86","Csf2",
+                                            "Tnf","Il1b","Il6","Tlr4","Cxcl2","Ifng","Il1r1"), min.cutoff = "q9", coord.fixed = 1)
+    FeaturePlot(scRNA.SeuObj, features = c("Il1a","Il1b","Il6","Nos2","Tlr2","Tlr4","Cd80","Cd86"), min.cutoff = "q9", coord.fixed = 1)
+    
+    
+    ## M2
+    # M2 http://biocc.hrbmu.edu.cn/CellMarker/
+    FeaturePlot(scRNA.SeuObj, features = c("Chil3","Csf1r","Mrc1","Pparg","Arg1","Cd163","Clec10a","Clec7a",
+                                            "Cd206","Cd209","Ccl18","Fizz1"), min.cutoff = "q9", coord.fixed = 1)
+    # https://www.biocompare.com/Editorial-Articles/566347-A-Guide-to-Macrophage-Markers/
+    FeaturePlot(scRNA.SeuObj, features = c("Cd115", "Cd206", "Pparg", "Arg1", "Cd163", "Cd301", 
+                                            "Dectin-1", "Pdcd1lg2", "Fizz1"), min.cutoff = "q9", coord.fixed = 1)
+    
+    FeaturePlot(scRNA.SeuObj, features = c("Chil3"), min.cutoff = "q9", coord.fixed = 1)
+    
+    
+    
+    ## Tumor associated macrophage(TAM)
+    FeaturePlot(scRNA.SeuObj, features = c("Ccr2","Csf1r","Marco","Pdl2","Cd40","Ccl2","Csf1","Cd16"), 
+                min.cutoff = "q9", coord.fixed = 1)
+    
+    # Erythrocytes
+    FeaturePlot(scRNA.SeuObj, features = c("Hbb-bs"), min.cutoff = "q9", coord.fixed = 1)
+    # Platelet 
+    FeaturePlot(scRNA.SeuObj, features = c("Ppbp"), min.cutoff = "q9", coord.fixed = 1)
+    
+    ## Summary
+    markers.to.plot <- c("Cd3d","Cd3e", "Cd4","Cd8a", "Csf1r", "Lyz2","Chil3","Il1b", "S100a9","Nkg7",
+                         "Gzmb", "Cd79a", "Ms4a1","Clu","Hbb-bs","Ppbp")
+    
+    FeaturePlot(scRNA.SeuObj, features = markers.to.plot, min.cutoff = "q9", coord.fixed = 1)
+    # T Cell: Cd3d,Cd3e;  CD4+ T Cell: Cd4; CD8+ T Cell: Cd8a; Macrophages: Csf1r,Lyz,Chil3;  Neutrophils: S100a9; 
+    # NK Cell: Nkg7,Gzmb; B Cell: Cd79a,Ms4a1; Mast Cell: Clu; Erythrocytes: Hbb-bs; Platelet: Ppbp
   
   
   dev.off()
@@ -460,6 +465,8 @@
   save.image(paste0(Save.Path,"/05_Identify_conserved_cell_type_markers.RData"))  
   
 ##### 06 Cell type annotation  #####
+  ## Creative Cell type folder
+  dir.create(paste0(Save.Path,"/",ProjectName,"_CT"))
   # scRNA.SeuObj.copy <- scRNA.SeuObj
   
   ## CD4+T: CD4+T Cell; CD8+T: CD8+T Cell; T: T Cell; B: B Cell; Mac: Macrophages;
@@ -524,36 +531,43 @@
   DimPlot(scRNA.SeuObj, label = TRUE) %>% BeautifyggPlot(.,LegPos = c(1, 0.5))
   
   DimPlot(scRNA.SeuObj,group.by = "celltype",label.size = 7,label = TRUE,  
-          pt.size =2) %>% BeautifyUMAP(FileName = "_PBMC_nlDR_CellType")
+          pt.size =2) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_CellType"))
   DimPlot(scRNA.SeuObj,group.by = "sample",  
-          pt.size =0.5) %>% BeautifyUMAP(FileName = "_PBMC_nlDR_Sample")
+          pt.size =0.5) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_Sample"))
   DimPlot(scRNA.SeuObj,group.by = "seurat_clusters",label.size = 7, label = TRUE,  
-          pt.size =1) %>% BeautifyUMAP(FileName = "_PBMC_nlDR_Clusters")
+          pt.size =1) %>% BeautifyUMAP(FileName = paste0("/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_Clusters"))
   
+
   pdf(
-    file = paste0(setwd(getwd()),"/",Version,"/PBMC_nlDR_CellType_Sup.pdf"),
-    width = 10,  height = 8
+    file = paste0(getwd(),"/",Version,"/",ProjectName,"_CT/",ProjectName,"_nlDR_CellType_Sup.pdf"),
+    width = 12,  height = 8
   )
-  ##
   
-  
-  DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2,split.by = "sample", label = TRUE) %>% 
-    BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
-                   SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9)
-  
-  DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2,split.by = "Cachexia", label = TRUE, label.size = 4) %>% 
-    BeautifyggPlot(.,LegPos = "top",AxisTitleSize=1.2, TitleSize = 20,
-                   LegDir = "horizontal",SubTitSize = 17 , LegTextSize = 14, XaThick=1, YaThick=1)
-  
-  DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2,split.by = "Sex", label = TRUE, label.size = 4) %>% 
-    BeautifyggPlot(.,LegPos = "top",AxisTitleSize=1.2, TitleSize = 20,
-                   LegDir = "horizontal",SubTitSize = 17 , LegTextSize = 14, XaThick=1, YaThick=1)
-  
-  ## tSNE
-  DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = "sample") %>% 
-    BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.85, 0.15),AxisTitleSize=1.2, LegTextSize = 18)
+    DimPlot(scRNA.SeuObj, reduction = "umap", label = TRUE, label.size = 7, repel = TRUE) %>% 
+      BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, LegTextSize = 14)
+    
+    
+    for (i in 1:(ncol(list_files.df)-1)) {
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", group.by = colnames(list_files.df)[i+1]) %>% 
+              BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
+              theme(plot.title = element_text(vjust = 0.85)))
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+              BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
+                             SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
+      
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = colnames(list_files.df)[i+1]) %>% 
+              BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
+              theme(plot.title = element_text(vjust = 0.85)))
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+              BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
+                             SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
+      
+    }
+    rm(i)
   
   dev.off()
+  
+  
   
   
   ## DotPlot
@@ -566,22 +580,22 @@
     width = 10,  height = 8
   )
   
-  # https://satijalab.org/seurat/reference/dotplot
-  DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = c("lightgrey", "blue"), 
-          dot.scale = 8) + RotatedAxis()%>% 
-    BeautifyggPlot(.,LegPos = "bottom",AxisTitleSize=1, TitleSize = 20, xangle =90,
-                   LegDir = "horizontal",SubTitSize = 17 , LegTextSize = 14, XaThick=1, YaThick=1,XtextSize=12,  YtextSize=12)
-  
-  DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = DotPlot_Color1.set, 
-          dot.scale = 8, split.by = "sample") + RotatedAxis()
-  
-  
-  # https://github.com/satijalab/seurat/issues/1541
-  DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = DotPlot_Color2.set, 
-          dot.scale = 8, split.by = "Cachexia") + RotatedAxis()
-  
-  DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = DotPlot_Color3.set, 
-          dot.scale = 8, split.by = "Sex") + RotatedAxis()
+    # https://satijalab.org/seurat/reference/dotplot
+    DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = c("lightgrey", "blue"), 
+            dot.scale = 8) + RotatedAxis()%>% 
+      BeautifyggPlot(.,LegPos = "bottom",AxisTitleSize=1, TitleSize = 20, xangle =90,
+                     LegDir = "horizontal",SubTitSize = 17 , LegTextSize = 14, XaThick=1, YaThick=1,XtextSize=12,  YtextSize=12)
+    
+    DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = DotPlot_Color1.set, 
+            dot.scale = 8, split.by = "sample") + RotatedAxis()
+    
+    
+    # https://github.com/satijalab/seurat/issues/1541
+    DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = DotPlot_Color2.set, 
+            dot.scale = 8, split.by = "Cachexia") + RotatedAxis()
+    
+    DotPlot(scRNA.SeuObj, features = markers.to.plot, cols = DotPlot_Color3.set, 
+            dot.scale = 8, split.by = "Sex") + RotatedAxis()
   
   dev.off()
   
