@@ -334,79 +334,7 @@
     Meta.df <- left_join(Meta.df,list_files.df, by = "Folder")
     Meta.df[is.na(Meta.df)] <- ""
 
-## Export data        
-write.table( Meta.df ,
-             file = paste0(Save.Path,"/",ProjectName,"_CellCount_Meta.tsv"),
-             sep = "\t",
-             quote = F,
-             row.names = F
-)
-  
-    
-    # ## Before QC    
-    #   ID <- unique(scRNA_Ori.SeuObj@meta.data[["SampleID"]])
-    #   
-    #   for (j in 1:length(ID)) {
-    #     scRNA_Ori_Sub.SeuObj <- scRNA_Ori.SeuObj[,scRNA_Ori.SeuObj@meta.data[["SampleID"]] %in% ID[j]] 
-    #     Meta.df[j,1] <- ID[j]  # TN138
-    #     Meta.df[j,2] <- ncol(scRNA_Ori_Sub.SeuObj@assays[["RNA"]]@counts)
-    #     Meta.df[j,3] <- nrow(scRNA_Ori_Sub.SeuObj@assays[["RNA"]]@counts)
-    #     
-    #   }
-    #   rm(j,scRNA_Ori_Sub.SeuObj)
-    
-    
-    
-    
-    ## Before QC
-    Meta.df <- data.frame(matrix(nrow = 0,ncol = 3))
-    colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
-    
-    Meta.df[1,1] <- c("EO.M")  # TN138
-    Meta.df[1,2] <- ncol(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
-    Meta.df[1,3] <- nrow(scRNA_SeuObj.list[[1]]@assays[["RNA"]]@counts)
-    
-    Meta.df[2,1] <- c("LO.M")  # TN139
-    Meta.df[2,2] <- ncol(scRNA_SeuObj.list[[2]]@assays[["RNA"]]@counts)
-    Meta.df[2,3] <- nrow(scRNA_SeuObj.list[[2]]@assays[["RNA"]]@counts)
-    
-    Meta.df[3,1] <- c("LO.F")  # TN146
-    Meta.df[3,2] <- ncol(scRNA_SeuObj.list[[3]]@assays[["RNA"]]@counts)
-    Meta.df[3,3] <- nrow(scRNA_SeuObj.list[[3]]@assays[["RNA"]]@counts)
-    
-    Meta.df[4,1] <- c("EO.F")  # TN148
-    Meta.df[4,2] <- ncol(scRNA_SeuObj.list[[4]]@assays[["RNA"]]@counts)
-    Meta.df[4,3] <- nrow(scRNA_SeuObj.list[[4]]@assays[["RNA"]]@counts)
-    
-    # Summary to Meta table
-    Meta.df[5,1] <- c("Summary")
-    Meta.df[5,2] <- ncol(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
-    Meta.df[5,3] <- nrow(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
-    
-    ## After QC
-    colnames(Meta.df) <- c("NO.","Cell_Num","Gene_Num")
-    Meta.df[6,1] <- c("EO.M.QC")  # TN138
-    Meta.df[6,2] <- ncol(scRNA_SeuObj_QC.list[[1]]@assays[["RNA"]]@counts)
-    Meta.df[6,3] <- nrow(scRNA_SeuObj_QC.list[[1]]@assays[["RNA"]]@counts)
-    
-    Meta.df[7,1] <- c("LO.M.QC")  # TN139
-    Meta.df[7,2] <- ncol(scRNA_SeuObj_QC.list[[2]]@assays[["RNA"]]@counts)
-    Meta.df[7,3] <- nrow(scRNA_SeuObj_QC.list[[2]]@assays[["RNA"]]@counts)
-    
-    Meta.df[8,1] <- c("LO.F.QC")  # TN146
-    Meta.df[8,2] <- ncol(scRNA_SeuObj_QC.list[[3]]@assays[["RNA"]]@counts)
-    Meta.df[8,3] <- nrow(scRNA_SeuObj_QC.list[[3]]@assays[["RNA"]]@counts)
-    
-    Meta.df[9,1] <- c("EO.F.QC")  # TN148
-    Meta.df[9,2] <- ncol(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
-    Meta.df[9,3] <- nrow(scRNA_SeuObj_QC.list[[4]]@assays[["RNA"]]@counts)
-    
-    # Summary to Meta table
-    Meta.df[10,1] <- c("Summary.QC")
-    Meta.df[10,2] <- ncol(scRNA.SeuObj@assays[["RNA"]]@counts)
-    Meta.df[10,3] <- nrow(scRNA.SeuObj@assays[["RNA"]]@counts)
-  
-  
+  ## Export data        
   write.table( Meta.df ,
                file = paste0(Save.Path,"/",ProjectName,"_CellCount_Meta.tsv"),
                sep = "\t",
@@ -414,7 +342,7 @@ write.table( Meta.df ,
                row.names = F
   )
   
-  
+
 ##### 05 Identify conserved cell type markers  ##### 
   ## Creative Cell type folder
   dir.create(paste0(Save.Path,"/",ProjectName,"_CT"))
