@@ -65,6 +65,7 @@
   ProjectName = "CC"
   
 ##### Load datasets  #####
+  ################## (Pending) Expression Matrix Datasets ################## 
   # ## GSE103322 HNSC
   # GeneExp.df <- read.table(InputFolder, header=T, row.names = 1, sep="\t")
   # #raw_counts <- GeneExp.df[6:nrow(GeneExp.df),]
@@ -78,6 +79,7 @@
   # list_files.set <- list.files(InputFolder,full.names = T)
   # Nfiles = length(list_files.set)
 
+  ##### 10x Datasets #####
   #### Cachexia
   
   ## Annotation table
@@ -343,6 +345,9 @@
   )
   
 
+
+################## (Pending) Cell Cycle Regression ##################    
+################## (Pending) Auto Cell type annotation ##################     
 ##### 05 Identify conserved cell type markers  ##### 
   ## Creative Cell type folder
   dir.create(paste0(Save.Path,"/",ProjectName,"_CT"))
@@ -630,14 +635,127 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
   
   
 ##### 07 Count Cell number  #####
+  ## Annotation Summary Table
+    for (i in 1:(length(list_files.df)-1)) {
+      if(i==1){
+        Anno.df <- data.frame(scRNA.SeuObj@meta.data[[3+i]])
+        colnames(Anno.df)[i] <- colnames(list_files.df)[i+1]
+      }else{
+        Anno_S.df <- data.frame(scRNA.SeuObj@meta.data[[3+i]])
+        Anno.df <- data.frame(Anno.df, Anno_S.df)
+        colnames(Anno.df)[i] <- colnames(list_files.df)[i+1]
+      }
+    }
+    rm(i,Anno_S.df)
+    
+    Anno.df <- data.frame(Anno.df, celltype = scRNA.SeuObj@meta.data[["celltype"]])
+  
+  ## Annotation Frequency
+    # All
+      Anno_Freq_df.lt <- list()
+      
+      for (i in 1:(ncol(Anno.df))) {
+        Anno_Freq_df.lt[[i]] <- table(Anno.df[,i]) %>% as.data.frame()
+        names(Anno_Freq_df.lt)[[i]] <- paste0("Freq_",colnames(Anno.df)[i])
+          
+      }
+      rm(i)
+    
+ 
+   # Group by sample
+      # assign(colnames(Anno.df)[1], Anno.df[,1] %>% unique()) 
+      Anno_Tar.set <- Anno.df[,1] %>% unique()
+      Anno_Tar.Num <- Anno_Tar.set %>% length()
+      Anno_Tar_df.lt <- list()
+      
+      for (i in 1:Anno_Tar.Num) {
+        Anno_Tar_df.lt[[i]] <- Anno.df[Anno.df[,1]==Anno_Tar.set[i],]
+        names(Anno_Tar_df.lt)[[i]] <-  paste0("State_",Anno_Tar.set[i])
+      }
+      rm(i)
+      
+      Anno_Freq_Tar_df.lt <- list()
+      
+      for (j in 1:length(Anno_Tar_df.lt)) {
+        Anno_Freq_Tar_df.lt[[j]] <- list()
+        names(Anno_Freq_Tar_df.lt)[[j]] <- paste0(names(Anno_Tar_df.lt)[j])
+        
+        for (i in 1:(ncol(Anno_Tar_df.lt[[j]]))) {
+          Anno_Freq_Tar_df.lt[[j]][[i]] <- table(Anno_Tar_df.lt[[j]][,i]) %>% as.data.frame()
+          names(Anno_Freq_Tar_df.lt[[j]][[i]])[1] <- colnames(Anno.df)[i]
+          Anno_Freq_Tar_df.lt[[j]][[i]] <- data.frame(Type=paste0(Anno_Tar_df.lt[[j]][1,1]),
+                                                      Anno_Freq_Tar_df.lt[[j]][[i]])
+          colnames(Anno_Freq_Tar_df.lt[[j]][[i]])[1] <- colnames(list_files.df)[1+1]
+          Anno_Freq_Tar_df.lt[[j]][[i]]$Percent <- Anno_Freq_Tar_df.lt[[j]][[i]]$Freq/sum(Anno_Freq_Tar_df.lt[[j]][[i]]$Freq)
+          
+          names(Anno_Freq_Tar_df.lt[[j]])[[i]] <- paste0("Freq_",colnames(Anno_Tar_df.lt[[j]])[[i]])
+          
+        }
+          if(i==1 && j==1){
+            Freq_All.df <- Anno_Freq_Tar_df.lt[[j]][[i]]
+          }else{
+            Freq_All.df <- rbind(Freq_All.df, Anno_Freq_Tar_df.lt[[j]][[i]])
+          }
+          
+        
+      }
+      rm(i,j)
+      
+      # Combind all count of sample
+      Freq_All.df <- data.frame(Index = row.names(Freq_All.df),Freq_All.df )
+      colnames(Freq_All.df) <- c("Index","Pheno_Type","Cell_Type","Number","Percent")
+      
+    #### LinePlot ####
+      # https://ithelp.ithome.com.tw/articles/10186047
+      # Freq_All.df$Cell_Type <- factor(Freq_All.df$Cell_Type,
+      #                                    levels = sort(unique(as.character(Freq_All.df$Cell_Type))))
+  
+        Freq_All.df$Cell_Type <- factor(Freq_All.df$Cell_Type,
+                                        levels = Cell_Type_Order.set)
+        
+        ## Plot by State
+        CellNum_P1 <- ggplot(Freq_All.df, aes(x = factor(Cell_Type), y = Number, 
+                                              colour = Pheno_Type, group = Pheno_Type)) + 
+          geom_line(linetype = "dashed",size=1.5) + 
+          geom_point(shape = 12, size = 4, fill = "white")+ theme_bw()+
+          theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+        
+        CellNum_P1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
+                                      XtextSize=15,  YtextSize=15, xangle = 90,
+                                      LegTextSize = 15) + 
+          theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P1
+        CellNum_P1
+        
+        CellNum_P2 <- ggplot(Freq_All.df, aes(x = factor(Cell_Type), y = Percent, 
+                                              colour = Pheno_Type, group = Pheno_Type)) + 
+          geom_line(linetype = "dashed",size=1.5) + 
+          geom_point(shape = 12, size = 4, fill = "white")+ theme_bw()+
+          theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank()) 
+        
+        CellNum_P2 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
+                                      XtextSize=18,  YtextSize=18, xangle = 90,
+                                      LegTextSize = 15) + 
+          theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P2
+        CellNum_P2
+      
+    #### All type compare to Combine Sex #### 
+        
+        
+    
+##*** Save to excel file in different sheet    
+
+##################################################################################################################
   Pheno.df <- data.frame(sample = scRNA.SeuObj@meta.data[["sample"]],celltype = scRNA.SeuObj@meta.data[["celltype"]],
                          Cachexia = scRNA.SeuObj@meta.data[["Cachexia"]],Sex = scRNA.SeuObj@meta.data[["Sex"]])
   # Pheno.df.table <- table(Pheno.df) %>% as.data.frame()
-  
+
+    
   Freq_sample.df <- table(Pheno.df$sample) %>% as.data.frame()
   Freq_CT.df <- table(Pheno.df$celltype) %>% as.data.frame()
   Freq_Cach.df <- table(Pheno.df$Cachexia) %>% as.data.frame()
   Freq_Sex.df <- table(Pheno.df$Sex) %>% as.data.frame()
+  
+  
   
   ##
   Pheno_EO_M.df <- Pheno.df[Pheno.df$sample=="EO.M",]
@@ -705,6 +823,7 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
     theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P2
   CellNum_P2
   
+  ##################################################################################################################
   
   #### All type compare to Combine Sex ####  
   ##
@@ -907,6 +1026,7 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
      BarPlot2_1, BarPlot2_2, BarPlot3_1, BarPlot3_2)
   
   save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
+
   
   
 ##### 08_1 Find CCmarker in different Cell type and VolcanoPlot (SSA) ########
@@ -1143,8 +1263,10 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
   
   save.image(paste0(Save.Path,"/08_2_Find_CCmarker_in_different_Cell_type_and_VolcanoPlot(SPA).RData"))
   
-  
-  #####------------------------------------------------------------------------------------------------------------#####
+################## (Pending) CCmarker matrix (Heatmap) ##################   
+################## (Pending) CCmarker matrix LogFC (Heatmap) ##################  
+
+    #####------------------------------------------------------------------------------------------------------------#####
   
 ##### 09_0 GSEA Analysis (Geneset Prepare) #####
   # https://bioinformatics-core-shared-training.github.io/cruk-summer-school-2018/RNASeq2018/html/06_Gene_set_testing.nb.html
@@ -1462,4 +1584,4 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
   
 ##### Deconvolution #####
   
-  
+##### Beautify Figs #####  
