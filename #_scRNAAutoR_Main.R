@@ -47,7 +47,7 @@
   source("FUN_GSEA_LargeGeneSet.R")
   source("FUN_GSEA_ggplot.R")
 
-##### Current path and new folder setting  ##### 
+##### Current path and new folder setting*  ##### 
   ## GSE103322 HNSC
   # Version = paste0(Sys.Date(),"_","HNSC")
   # Save.Path = paste0(getwd(),"/",Version)
@@ -63,6 +63,11 @@
   InputFolder = "Input_files_10x" 
   InputAnno = "PBMC_Ano.csv"
   ProjectName = "CC"
+
+##### Parameter setting #####
+  ClassSet1 = 1
+  ClassSet2 = "Sex"
+  ClassSet3 = "Cachexia"
   
 ##### Load datasets  #####
   ################## (Pending) Expression Matrix Datasets ################## 
@@ -661,8 +666,7 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
       }
       rm(i)
     
-    ##########
-      ClassSet1 = 1
+
    # Group by sample
       # assign(colnames(Anno.df)[1], Anno.df[,1] %>% unique()) 
       Anno_Tar.set <- Anno.df[, ClassSet1] %>% unique()
@@ -697,8 +701,7 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
           }else{
             Freq_All.df <- rbind(Freq_All.df, Anno_Freq_Tar_df.lt[[j]][[i]])
           }
-          
-        
+
       }
       rm(i,j)
       
@@ -739,310 +742,165 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
           theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P2
         CellNum_P2
       
-    #### All type compare to Combine Sex #### 
+
+    #### All type compare to Combine Sex ####  
+      ##
+      Freq_All_Cla.lt <- list() 
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+      ClassSet3.set <- Anno.df[,ClassSet3] %>% unique()
+      Freq_All_Cla.lt[[paste0("Anno_Cla",1)]] <- Anno.df[Anno.df[,ClassSet3] == ClassSet3.set[1],]
+      Freq_All_Cla.lt[[paste0("Anno_Cla",2)]] <- Anno.df[Anno.df[,ClassSet3] == ClassSet3.set[2],]
+      
+      
+      # Count EO_CT
+      Freq_All_Cla.lt[[paste0("Freq_Cla",1)]] <- table(Freq_All_Cla.lt[[paste0("Anno_Cla",1)]]$celltype) %>% as.data.frame()
+      Freq_All_Cla.lt[[paste0("Freq_Cla",1)]] <- data.frame(Type=ClassSet3.set[1],Freq_All_Cla.lt[[paste0("Freq_Cla",1)]])
+      Freq_All_Cla.lt[[paste0("Freq_Cla",1)]]$Percent <- Freq_All_Cla.lt[[paste0("Freq_Cla",1)]]$Freq/sum(Freq_All_Cla.lt[[paste0("Freq_Cla",1)]]$Freq)
+      colnames(Freq_All_Cla.lt[[paste0("Freq_Cla",1)]]) <- c("Sample","celltype","Freq","Percent")
+      
+      # Count LO_CT
+      Freq_All_Cla.lt[[paste0("Freq_Cla",2)]] <- table(Freq_All_Cla.lt[[paste0("Anno_Cla",2)]]$celltype) %>% as.data.frame()
+      Freq_All_Cla.lt[[paste0("Freq_Cla",2)]] <- data.frame(Type=ClassSet3.set[2],Freq_All_Cla.lt[[paste0("Freq_Cla",2)]])
+      Freq_All_Cla.lt[[paste0("Freq_Cla",2)]]$Percent <- Freq_All_Cla.lt[[paste0("Freq_Cla",2)]]$Freq/sum(Freq_All_Cla.lt[[paste0("Freq_Cla",2)]]$Freq)
+      colnames(Freq_All_Cla.lt[[paste0("Freq_Cla",2)]]) <- c("Sample","celltype","Freq","Percent")
+      
+      # Combind all count of sample
+      Freq_All_Cla.lt[["Freq_All_Cla.df"]]  <- rbind(Anno_Freq_Tar_df.lt[[1]][["Freq_celltype"]],
+                                                    Anno_Freq_Tar_df.lt[[2]][["Freq_celltype"]],
+                                                    Anno_Freq_Tar_df.lt[[3]][["Freq_celltype"]],
+                                                    Anno_Freq_Tar_df.lt[[4]][["Freq_celltype"]],
+                                                    Freq_All_Cla.lt[[paste0("Freq_Cla",1)]],
+                                                    Freq_All_Cla.lt[[paste0("Freq_Cla",2)]])
+                                                    
     
-##*** Save to excel file in different sheet    
+      
+      Freq_All_Cla.lt[["Freq_All_Cla.df"]] <- data.frame(Index = row.names(Freq_All_Cla.lt[["Freq_All_Cla.df"]]),Freq_All_Cla.lt[["Freq_All_Cla.df"]] )
+      colnames(Freq_All_Cla.lt[["Freq_All_Cla.df"]]) <- c("Index","Pheno_Type","Cell_Type","Number","Percent")
+      
+      
+      
+      Freq_All_Cla.lt[["Freq_All_Cla.df"]]$Percent <- as.numeric(Freq_All_Cla.lt[["Freq_All_Cla.df"]]$Percent)
+      
+      write.table( Freq_All_Cla.lt[["Freq_All_Cla.df"]] ,
+                   file = paste0(Save.Path,"/",ProjectName,"_CellCount_CT_Cla.tsv"),
+                   sep = "\t",
+                   quote = F,
+                   row.names = F
+      )
+      
+      
+      
+      
+      #### LinePlot ####
+        Freq_All_Cla.df <- Freq_All_Cla.lt[["Freq_All_Cla.df"]]
+        
+        # Freq_All_Cla.df$Cell_Type <- factor(Freq_All_Cla.df$Cell_Type,
+        #                                    levels = sort(unique(as.character(Freq_All_Cla.df$Cell_Type))))
+        Freq_All_Cla.df$Cell_Type <- factor(Freq_All_Cla.df$Cell_Type,
+                                           levels = Cell_Type_Order.set)
+        
+        CellNum_P3 <- ggplot(Freq_All_Cla.df, aes(x = factor(Cell_Type), y = Number, 
+                                                 colour = Pheno_Type,
+                                                 group = Pheno_Type,linetype=Pheno_Type
+        )) + 
+          geom_line(size=1.5) + 
+          scale_linetype_manual(name="Pheno_Type", 
+                                values=c("solid",  "dotted","dotdash", "solid", "dotted", "dotdash"), #  values=c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
+                                labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")) + 
+          scale_color_manual(values = c('#ba0449','#ff52bd','#f0679b','#3d3c99','#5292f2','#33aef5'))+
+          geom_point(shape = 12, size = 4, fill = "white") + theme_bw()+
+          theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+        
+        
+        CellNum_P3 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.4, 0.8),AxisTitleSize=1.7,
+                                      XtextSize=18,  YtextSize=18,xangle = 90,
+                                      LegTextSize = 15)  + 
+          theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P3
+        CellNum_P3
+        
+        library(eoffice)
+        topptx(CellNum_P3,paste0(Save.Path,"/Temp.pptx"))
+        
+        CellNum_P4 <- ggplot(Freq_All_Cla.df, aes(x = factor(Cell_Type), y = Percent, 
+                                                 colour = Pheno_Type,
+                                                 group = Pheno_Type,linetype=Pheno_Type
+        )) + 
+          geom_line(size=1.5) + 
+          scale_linetype_manual(name="Pheno_Type", 
+                                values=c("solid",  "dotted","dotdash", "solid", "dotted", "dotdash"), #  values=c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
+                                labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")) + 
+          scale_color_manual(values = c('#ba0449','#ff52bd','#f0679b','#3d3c99','#5292f2','#33aef5'))+
+          geom_point(shape = 12, size = 4, fill = "white") +
+          theme(panel.border = element_blank(),panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"))+
+          #theme_set(theme_bw())+ # Remove the background
+          theme_bw()+
+          theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+        
+        CellNum_P4 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.15, 0.82),AxisTitleSize=1.7,
+                                      XtextSize=18,  YtextSize=,18, xangle = 90,
+                                      LegTextSize = 15)  + 
+          theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P4
+        CellNum_P4
+      
+        rm(Freq_All_Cla.df)
+      
+      
+      ##### BarPlot ##### 
+        # https://blog.gtwang.org/r/ggplot2-tutorial-layer-by-layer-plotting/3/
+        colnames(Anno.df)[ncol(Anno.df)] <- "Cell_Type"
+        Anno.df$Cell_Type <- factor(Anno.df$Cell_Type,
+                                    levels = sort(unique(as.character(Anno.df$Cell_Type))))
+        
+        # sample
+        BarPlot1_1 <- ggplot(Pheno.df, aes(Cell_Type, fill=Anno.df[,1])) + 
+          geom_bar(position="dodge")+theme_bw()+
+          theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+        BarPlot1_1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
+                                      XtextSize=18,  YtextSize=,18, xangle = 90,
+                                      LegTextSize = 15)  + 
+          theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid"))+
+          labs(fill=colnames(Anno.df)[1]) -> BarPlot1_1
+        BarPlot1_1
+        
+        ##### Export PDF file #####
+        pdf(file = paste0(Save.Path,"/",ProjectName,"_CellCount_LinePlot.pdf"),
+            width = 7, height = 7 )
+          CellNum_P4
+          CellNum_P3
+          CellNum_P1
+          CellNum_P2
+          for (i in 1:(ncol(Anno.df)-1)) {
+              # sample
+              BarPlot1_1 <- ggplot(Pheno.df, aes(Cell_Type, fill = Anno.df[,i])) + 
+                geom_bar(position="dodge")+theme_bw()+
+                theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+              BarPlot1_1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
+                                            XtextSize=18,  YtextSize=,18, xangle = 90,
+                                            LegTextSize = 15)  + 
+                theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid"))+
+                labs(fill=colnames(Anno.df)[i]) -> BarPlot1_1
+              print(BarPlot1_1)
+              
+              BarPlot1_2 <- ggplot(Pheno.df, aes(Cell_Type, fill = Anno.df[,i])) + 
+                geom_bar(position="fill")+theme_bw()+
+                theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+              BarPlot1_2 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(-0.08, -0.08),AxisTitleSize=1.7,
+                                            XtextSize=18,  YtextSize=,18, xangle = 90,
+                                            LegTextSize = 15)  + 
+                theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) +
+                labs(fill=colnames(Anno.df)[i]) -> BarPlot1_2
+              print(BarPlot1_2)
+              rm(BarPlot1_1,BarPlot1_2)
+              
+            }
+            rm(i)
 
-##################################################################################################################
-  Pheno.df <- data.frame(sample = scRNA.SeuObj@meta.data[["sample"]],celltype = scRNA.SeuObj@meta.data[["celltype"]],
-                         Cachexia = scRNA.SeuObj@meta.data[["Cachexia"]],Sex = scRNA.SeuObj@meta.data[["Sex"]])
-  # Pheno.df.table <- table(Pheno.df) %>% as.data.frame()
+        dev.off() # graphics.off()
+        
+        
+save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
 
-    
-  Freq_sample.df <- table(Pheno.df$sample) %>% as.data.frame()
-  Freq_CT.df <- table(Pheno.df$celltype) %>% as.data.frame()
-  Freq_Cach.df <- table(Pheno.df$Cachexia) %>% as.data.frame()
-  Freq_Sex.df <- table(Pheno.df$Sex) %>% as.data.frame()
-  
-  
-  
-  ##
-  Pheno_EO_M.df <- Pheno.df[Pheno.df$sample=="EO.M",]
-  Pheno_LO_M.df <- Pheno.df[Pheno.df$sample=="LO.M",]
-  Pheno_EO_F.df <- Pheno.df[Pheno.df$sample=="EO.F",]
-  Pheno_LO_F.df <- Pheno.df[Pheno.df$sample=="LO.F",]
-  
-  # Count EO_M_CT
-  Freq_EO_M_CT.df <- table(Pheno_EO_M.df$celltype) %>% as.data.frame()
-  Freq_EO_M_CT.df <- data.frame(Type="EO.M",Freq_EO_M_CT.df)
-  Freq_EO_M_CT.df$Percent <- Freq_EO_M_CT.df$Freq/sum(Freq_EO_M_CT.df$Freq)
-  
-  # Count LO_M_CT
-  Freq_LO_M_CT.df <- table(Pheno_LO_M.df$celltype) %>% as.data.frame()
-  Freq_LO_M_CT.df <- data.frame(Type="LO.M",Freq_LO_M_CT.df)
-  Freq_LO_M_CT.df$Percent <- Freq_LO_M_CT.df$Freq/sum(Freq_LO_M_CT.df$Freq)
-  
-  # Count EO_F_CT
-  Freq_EO_F_CT.df <- table(Pheno_EO_F.df$celltype) %>% as.data.frame()
-  Freq_EO_F_CT.df <- data.frame(Type="EO.F",Freq_EO_F_CT.df)
-  Freq_EO_F_CT.df$Percent <- Freq_EO_F_CT.df$Freq/sum(Freq_EO_F_CT.df$Freq)
-  
-  # Count LO_F_CT
-  Freq_LO_F_CT.df <- table(Pheno_LO_F.df$celltype) %>% as.data.frame()
-  Freq_LO_F_CT.df <- data.frame(Type="LO.F",Freq_LO_F_CT.df)
-  Freq_LO_F_CT.df$Percent <- Freq_LO_F_CT.df$Freq/sum(Freq_LO_F_CT.df$Freq)
-  
-  # Combind all count of sample
-  Freq_All.df <- rbind(Freq_EO_M_CT.df,Freq_LO_M_CT.df,
-                       Freq_EO_F_CT.df,Freq_LO_F_CT.df)
-  Freq_All.df <- data.frame(Index = row.names(Freq_All.df),Freq_All.df )
-  colnames(Freq_All.df) <- c("Index","Pheno_Type","Cell_Type","Number","Percent")
-  # Freq_All.df$Index <- factor(Freq_All.df$Index,
-  #                                              levels = Freq_All.df$Index)
-  
-  #### LinePlot ####  
-  # https://ithelp.ithome.com.tw/articles/10186047
-  # Freq_All.df$Cell_Type <- factor(Freq_All.df$Cell_Type,
-  #                                    levels = sort(unique(as.character(Freq_All.df$Cell_Type))))
-  
-  Freq_All.df$Cell_Type <- factor(Freq_All.df$Cell_Type,
-                                  levels = Cell_Type_Order.set)
-  
-  CellNum_P1 <- ggplot(Freq_All.df, aes(x = factor(Cell_Type), y = Number, 
-                                        colour = Pheno_Type, group = Pheno_Type)) + 
-    geom_line(linetype = "dashed",size=1.5) + 
-    geom_point(shape = 12, size = 4, fill = "white")+ theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  
-  CellNum_P1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
-                                XtextSize=15,  YtextSize=15, xangle = 90,
-                                LegTextSize = 15) + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P1
-  CellNum_P1
-  
-  CellNum_P2 <- ggplot(Freq_All.df, aes(x = factor(Cell_Type), y = Percent, 
-                                        colour = Pheno_Type, group = Pheno_Type)) + 
-    geom_line(linetype = "dashed",size=1.5) + 
-    geom_point(shape = 12, size = 4, fill = "white")+ theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank()) 
-  
-  CellNum_P2 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=18, xangle = 90,
-                                LegTextSize = 15) + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P2
-  CellNum_P2
-  
-  ##################################################################################################################
-  
-  #### All type compare to Combine Sex ####  
-  ##
-  Pheno_EO.df <- Pheno.df[Pheno.df$Cachexia=="EO",]
-  Pheno_LO.df <- Pheno.df[Pheno.df$Cachexia=="LO",]
-  
-  # Count EO_CT
-  Freq_EO_CT.df <- table(Pheno_EO.df$celltype) %>% as.data.frame()
-  Freq_EO_CT.df <- data.frame(Type="EO",Freq_EO_CT.df)
-  Freq_EO_CT.df$Percent <- Freq_EO_CT.df$Freq/sum(Freq_EO_CT.df$Freq)
-  
-  # Count LO_CT
-  Freq_LO_CT.df <- table(Pheno_LO.df$celltype) %>% as.data.frame()
-  Freq_LO_CT.df <- data.frame(Type="LO",Freq_LO_CT.df)
-  Freq_LO_CT.df$Percent <- Freq_LO_CT.df$Freq/sum(Freq_LO_CT.df$Freq)
-  
-  # Combind all count of sample
-  Freq_All_Ca.df <- rbind(Freq_EO_M_CT.df,Freq_LO_M_CT.df,
-                          Freq_EO_F_CT.df,Freq_LO_F_CT.df,
-                          Freq_EO_CT.df,Freq_LO_CT.df)
-  
-  Freq_All_Ca.df <- data.frame(Index = row.names(Freq_All_Ca.df),Freq_All_Ca.df )
-  colnames(Freq_All_Ca.df) <- c("Index","Pheno_Type","Cell_Type","Number","Percent")
-  
-  # Change the order
-  # https://blog.csdn.net/weixin_48172266/article/details/117537465
-  # CTOrder.set <- factor(Freq_All_Ca.df$Cell_Type,
-  #                       levels = sort(unique(as.character(Freq_All_Ca.df$Cell_Type))))
-  # 
-  # Freq_All_Ca.df <- Freq_All_Ca.df %>% 
-  #                   mutate(Cell_Type = CTOrder.set)
-  
-  ## Freq_All_Ca.df$Cell_Type <- factor(Freq_All_Ca.df$Cell_Type,
-  ##                                    levels = sort(unique(as.character(Freq_All_Ca.df$Cell_Type))))
-  
-  # Freq_All_Ca.df <- read.csv(paste0(Save.Path,"/PBMC_CT_Count_CH.txt"),sep = "\t")
-  Freq_All_Ca.df$Percent <- as.numeric(Freq_All_Ca.df$Percent)
-  
-  write.table( Freq_All_Ca.df ,
-               file = paste0(Save.Path,"/PBMC_CellCount_CT_Ca.tsv"),
-               sep = "\t",
-               quote = F,
-               row.names = F
-  )
-  
-  # https://stackoverflow.com/questions/27350243/ggplot-line-graph-with-different-line-styles-and-markers/27350366
-  # https://www.coder.work/article/6971741
-  # https://stackoverflow.com/questions/11344561/controlling-line-color-and-line-type-in-ggplot-legend
-  
-  #### LinePlot ####   
-  # Freq_All_Ca.df$Cell_Type <- factor(Freq_All_Ca.df$Cell_Type,
-  #                                    levels = sort(unique(as.character(Freq_All_Ca.df$Cell_Type))))
-  Freq_All_Ca.df$Cell_Type <- factor(Freq_All_Ca.df$Cell_Type,
-                                     levels = Cell_Type_Order.set)
-  
-  CellNum_P3 <- ggplot(Freq_All_Ca.df, aes(x = factor(Cell_Type), y = Number, 
-                                           colour = Pheno_Type,
-                                           group = Pheno_Type,linetype=Pheno_Type
-  )) + 
-    geom_line(size=1.5) + 
-    scale_linetype_manual(name="Pheno_Type", 
-                          values=c("solid",  "dotted","dotdash", "solid", "dotted", "dotdash"), #  values=c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
-                          labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")) + 
-    scale_color_manual(values = c('#ba0449','#ff52bd','#f0679b','#3d3c99','#5292f2','#33aef5'))+
-    geom_point(shape = 12, size = 4, fill = "white") + theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  
-  
-  CellNum_P3 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.4, 0.8),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=18,xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P3
-  CellNum_P3
-  
-  library(eoffice)
-  topptx(CellNum_P3,paste0(Save.Path,"/Temp.pptx"))
-  
-  CellNum_P4 <- ggplot(Freq_All_Ca.df, aes(x = factor(Cell_Type), y = Percent, 
-                                           colour = Pheno_Type,
-                                           group = Pheno_Type,linetype=Pheno_Type
-  )) + 
-    geom_line(size=1.5) + 
-    scale_linetype_manual(name="Pheno_Type", 
-                          values=c("solid",  "dotted","dotdash", "solid", "dotted", "dotdash"), #  values=c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
-                          labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")) + 
-    scale_color_manual(values = c('#ba0449','#ff52bd','#f0679b','#3d3c99','#5292f2','#33aef5'))+
-    geom_point(shape = 12, size = 4, fill = "white") +
-    theme(panel.border = element_blank(),panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"))+
-    #theme_set(theme_bw())+ # Remove the background
-    theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  
-  CellNum_P4 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.15, 0.82),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> CellNum_P4
-  CellNum_P4
-  
-  ##### Clean the dataframe #####    
-  CellPheno.lt <- list(Pheno.df, Pheno_EO.df, Pheno_LO.df,
-                       Pheno_EO_M.df,Pheno_LO_M.df,Pheno_EO_F.df,Pheno_LO_F.df)
-  names(CellPheno.lt) <- c("Pheno.df", "Pheno_EO.df", "Pheno_LO.df",
-                           "Pheno_EO_M.df","Pheno_LO_M.df","Pheno_EO_F.df","Pheno_LO_F.df")
-  rm(Pheno_EO.df, Pheno_LO.df, Pheno_EO_M.df,Pheno_LO_M.df,Pheno_EO_F.df,Pheno_LO_F.df)
-  
-  CellFreq.lt <- list(Freq_All_Ca.df, Freq_All.df, Freq_sample.df, 
-                      Freq_Sex.df,Freq_Cach.df, Freq_CT.df, 
-                      Freq_EO_CT.df, Freq_EO_F_CT.df, Freq_EO_M_CT.df,
-                      Freq_LO_CT.df, Freq_LO_F_CT.df, Freq_LO_M_CT.df)
-  names(CellFreq.lt) <- c("Freq_All_Ca.df", "Freq_All.df", "Freq_sample.df", 
-                          "Freq_Sex.df", "Freq_Cach.df", "Freq_CT.df", 
-                          "Freq_EO_CT.df", "Freq_EO_F_CT.df", "Freq_EO_M_CT.df",
-                          "Freq_LO_CT.df", "Freq_LO_F_CT.df", "Freq_LO_M_CT.df")
-  rm(Freq_sample.df, 
-     Freq_Sex.df,Freq_Cach.df, Freq_CT.df, 
-     Freq_EO_CT.df, Freq_EO_F_CT.df, Freq_EO_M_CT.df,
-     Freq_LO_CT.df, Freq_LO_F_CT.df, Freq_LO_M_CT.df)
-  
-  ##### BarPlot #####  
-  # https://blog.gtwang.org/r/ggplot2-tutorial-layer-by-layer-plotting/3/
-  colnames(Pheno.df) <- c("sample","Cell_Type","Cachexia","Sex")
-  Pheno.df$Cell_Type <- factor(Pheno.df$Cell_Type,
-                               levels = sort(unique(as.character(Pheno.df$Cell_Type))))
-  
-  # sample
-  BarPlot1_1 <- ggplot(Pheno.df, aes(Cell_Type, fill=sample)) + 
-    geom_bar(position="dodge")+theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  BarPlot1_1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> BarPlot1_1
-  BarPlot1_1
-  
-  BarPlot1_2 <- ggplot(Pheno.df, aes(Cell_Type, fill=sample)) + 
-    geom_bar(position="fill")+theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  BarPlot1_2 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(-0.08, -0.08),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> BarPlot1_2
-  BarPlot1_2
-  
-  # Cachexia
-  BarPlot2_1 <- ggplot(Pheno.df, aes(Cell_Type, fill=Cachexia)) + 
-    geom_bar(position="dodge")+theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  BarPlot2_1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> BarPlot2_1
-  BarPlot2_1
-  
-  BarPlot2_2 <- ggplot(Pheno.df, aes(Cell_Type, fill=Cachexia)) + 
-    geom_bar(position="fill")+theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  BarPlot2_2 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(-0.08, -0.08),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> BarPlot2_2
-  BarPlot2_2
-  
-  # Sex
-  BarPlot3_1 <- ggplot(Pheno.df, aes(Cell_Type, fill=Sex)) + 
-    geom_bar(position="dodge")+theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  BarPlot3_1 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(0.86, 0.85),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> BarPlot3_1
-  BarPlot3_1
-  BarPlot3_2 <- ggplot(Pheno.df, aes(Cell_Type, fill=Sex)) + 
-    geom_bar(position="fill")+theme_bw()+
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  BarPlot3_2 %>% BeautifyggPlot(.,AspRat=1,LegPos = c(-0.08, -0.08),AxisTitleSize=1.7,
-                                XtextSize=18,  YtextSize=,18, xangle = 90,
-                                LegTextSize = 15)  + 
-    theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) -> BarPlot3_2
-  
-  BarPlot3_2
-  
-  
-  ##### Export PDF file #####
-  pdf(file = paste0(Save.Path,"/PBMC_CellCount_LinePlot.pdf"),
-      width = 7, height = 7 )
-  CellNum_P4
-  CellNum_P3
-  CellNum_P1
-  CellNum_P2
-  BarPlot1_1
-  BarPlot1_2
-  BarPlot2_1
-  BarPlot2_2
-  BarPlot3_1
-  BarPlot3_2
-  dev.off() # graphics.off()
-  
-  rm(CellNum_P1, CellNum_P2, CellNum_P3, CellNum_P4, BarPlot1_1, BarPlot1_2,
-     BarPlot2_1, BarPlot2_2, BarPlot3_1, BarPlot3_2)
-  
-  save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
-
-  
-  
 ##### 08_1 Find CCmarker in different Cell type and VolcanoPlot (SSA) ########
   ### Define group by different phenotype ###
   source("FUN_Find_Markers.R")
