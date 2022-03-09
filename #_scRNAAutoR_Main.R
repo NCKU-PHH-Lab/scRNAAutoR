@@ -661,15 +661,16 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
       }
       rm(i)
     
- 
+    ##########
+      ClassSet1 = 1
    # Group by sample
       # assign(colnames(Anno.df)[1], Anno.df[,1] %>% unique()) 
-      Anno_Tar.set <- Anno.df[,1] %>% unique()
+      Anno_Tar.set <- Anno.df[, ClassSet1] %>% unique()
       Anno_Tar.Num <- Anno_Tar.set %>% length()
       Anno_Tar_df.lt <- list()
       
       for (i in 1:Anno_Tar.Num) {
-        Anno_Tar_df.lt[[i]] <- Anno.df[Anno.df[,1]==Anno_Tar.set[i],]
+        Anno_Tar_df.lt[[i]] <- Anno.df[Anno.df[, ClassSet1]==Anno_Tar.set[i],]
         names(Anno_Tar_df.lt)[[i]] <-  paste0("State_",Anno_Tar.set[i])
       }
       rm(i)
@@ -685,13 +686,13 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
           names(Anno_Freq_Tar_df.lt[[j]][[i]])[1] <- colnames(Anno.df)[i]
           Anno_Freq_Tar_df.lt[[j]][[i]] <- data.frame(Type=paste0(Anno_Tar_df.lt[[j]][1,1]),
                                                       Anno_Freq_Tar_df.lt[[j]][[i]])
-          colnames(Anno_Freq_Tar_df.lt[[j]][[i]])[1] <- colnames(list_files.df)[1+1]
+          colnames(Anno_Freq_Tar_df.lt[[j]][[i]])[1] <- colnames(list_files.df)[ClassSet1+1]
           Anno_Freq_Tar_df.lt[[j]][[i]]$Percent <- Anno_Freq_Tar_df.lt[[j]][[i]]$Freq/sum(Anno_Freq_Tar_df.lt[[j]][[i]]$Freq)
           
           names(Anno_Freq_Tar_df.lt[[j]])[[i]] <- paste0("Freq_",colnames(Anno_Tar_df.lt[[j]])[[i]])
           
         }
-          if(i==1 && j==1){
+          if(j==1){
             Freq_All.df <- Anno_Freq_Tar_df.lt[[j]][[i]]
           }else{
             Freq_All.df <- rbind(Freq_All.df, Anno_Freq_Tar_df.lt[[j]][[i]])
@@ -739,6 +740,19 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
         CellNum_P2
       
     #### All type compare to Combine Sex #### 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
     
