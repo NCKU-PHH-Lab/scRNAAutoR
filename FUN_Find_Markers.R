@@ -17,7 +17,7 @@
 #####----------------------------- Function -----------------------------#####
 
 Find_Markers <- function(PBMC.combined, ident1, ident2, CellType ,Path = getwd(), 
-                         log2FC=1, Pval=0.05,ResultFolder = "FindMarkers"
+                         log2FC=1, Pval=0.05,ResultFolder = "FindMarkers",ProjectTitle="Tar"
                          ) {
   ## Find Cachexia marker in T Cell
   
@@ -149,9 +149,9 @@ Find_Markers <- function(PBMC.combined, ident1, ident2, CellType ,Path = getwd()
   OUTPUT <- list(Tcell.CCMarker.F.S, Tcell.CCMarker.F.All, 
                  Tcell.CCMarker.F.S_Pos, Tcell.CCMarker.F.S_Pos_List,
                  Tcell.CCMarker.F.S_Neg, Tcell.CCMarker.F.S_Neg_List)
-  names(OUTPUT) <- c('CCMarker.S','CCMarker.All',
-                     'CCMarker.S_Pos', 'CCMarker.S_Pos_List',
-                     'CCMarker.S_Neg', 'CCMarker.S_Neg_List')
+  names(OUTPUT) <- c(paste0(ProjectTitle,'Marker.S'), paste0(ProjectTitle,'Marker.All'),
+                     paste0(ProjectTitle,'Marker.S_Pos'), paste0(ProjectTitle,'Marker.S_Pos_List'),
+                     paste0(ProjectTitle,'Marker.S_Neg'), paste0(ProjectTitle,'Marker.S_Neg_List'))
   
   
   return(OUTPUT)
