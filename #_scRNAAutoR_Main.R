@@ -880,6 +880,7 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
 
         dev.off() # graphics.off()
         
+        rm(CellNum_P1,CellNum_P2,CellNum_P3,CellNum_P4)
         
 save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
 
@@ -893,34 +894,27 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
     #   
     # }
     
-    #scRNA.SeuObj[[paste0("celltype.",colnames(list_files.df)[2])]] <- paste(Idents(scRNA.SeuObj), as.matrix(scRNA.SeuObj[[colnames(list_files.df)[2]]]), sep = "_")
-    
-    scRNA.SeuObj[[paste0("celltype.",ClassSet2)]] <- paste(Idents(scRNA.SeuObj), as.matrix(scRNA.SeuObj[[ClassSet2]]), sep = "_")
-    scRNA.SeuObj[[paste0("celltype.",ClassSet2,".",ClassSet3)]] <- paste(Idents(scRNA.SeuObj), as.matrix(scRNA.SeuObj[[ClassSet2]]), as.matrix(scRNA.SeuObj[[ClassSet3]]), sep = "_")
-  
-    # scRNA.SeuObj$celltype.Cachexia <- paste(Idents(scRNA.SeuObj), scRNA.SeuObj$Cachexia, sep = "_")
-    # scRNA.SeuObj$celltype.Cachexia.gender <- paste(Idents(scRNA.SeuObj), scRNA.SeuObj$Cachexia, scRNA.SeuObj$Sex, sep = "_")
-    # Idents(scRNA.SeuObj) <- "celltype.Cachexia.gender"
-    
+    scRNA.SeuObj[[paste0("celltype.",ClassSet2)]] <- paste(Idents(scRNA.SeuObj), 
+                                                           as.matrix(scRNA.SeuObj[[ClassSet2]]), sep = "_")
+    scRNA.SeuObj[[paste0("celltype.",ClassSet2,".",ClassSet3)]] <- paste(Idents(scRNA.SeuObj), 
+                                                                         as.matrix(scRNA.SeuObj[[ClassSet2]]), 
+                                                                         as.matrix(scRNA.SeuObj[[ClassSet3]]), sep = "_")
     Idents(scRNA.SeuObj) <- paste0("celltype.",ClassSet2,".",ClassSet3)
-    # scRNA.SeuObj$Cachexia.gender <- paste(scRNA.SeuObj$Cachexia, scRNA.SeuObj$Sex, sep = "_")
+
     
     DefaultAssay(scRNA.SeuObj) <- "RNA"
     
     
     ClassSet2.set <- list_files.df[[ClassSet2]] %>% unique()
     ClassSet3.set <- list_files.df[[ClassSet3]] %>% unique()
-    
+    CellType.list <- as.character(unique(scRNA.SeuObj@meta.data[["celltype"]]))
+    # CellType.list <- CellType.list[-9]
     ##-------------- Find Marker gene in Male --------------##
-      CellType.list <- as.character(unique(scRNA.SeuObj@meta.data[["celltype"]]))
-      # CellType.list <- CellType.list[-9] 
       Sep_Cla3_FMar.Path <- paste0(ProjectName,"_",Sampletype,"_Separate_",ClassSet3.set[1],"_FindMarkers")
       dir.create(paste0(Save.Path,"/",Sep_Cla3_FMar.Path))
       
       # About 15 mins
       CCMarker_Male.lt <- list()
-    
-      
       for(i in c(1:length(CellType.list))){ 
         try({
           CCMarker_Male.lt[[i]] <- Find_Markers(scRNA.SeuObj, 
@@ -940,11 +934,9 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
       
       
       ## Generate pdf and tif file for Male VolcanoPlot
-      Sep_Cla3_Volcano.Path <- paste0(ProjectName,"_",Sampletype,"_Separate_",ClassSet3[1],"_VolcanoPlot")
+      Sep_Cla3_Volcano.Path <- paste0(ProjectName,"_",Sampletype,"_Separate_",ClassSet3.set[1],"_VolcanoPlot")
       dir.create(paste0(Save.Path,"/",Sep_Cla3_Volcano.Path ))
-      
-     # dir.create(paste0(Save.Path,"/PBMC_SSA_Male_VolcanoPlot/"))
-      
+
       pdf(file = paste0(Save.Path,"/",Sep_Cla3_Volcano.Path,"/",Sep_Cla3_Volcano.Path,".pdf"),
           width = 7, height = 7 )
       for (i in 1:length(CellType.list)) {
@@ -952,7 +944,7 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
           print(VolcanoPlot(CCMarker_Male.lt[[i]][[paste0(ProjectName, "Marker.S")]],
                             CCMarker_Male.lt[[i]][[paste0(ProjectName, "Marker.S_Pos_List")]],
                             CCMarker_Male.lt[[i]][[paste0(ProjectName, "Marker.S_Neg_List")]], ShowGeneNum = 6)+ 
-                  ggtitle(paste0(ProjectName,"_",ClassSet3[1],"_",CellType.list[i]))
+                  ggtitle(paste0(ProjectName,"_",ClassSet3.set[1],"_",CellType.list[i]))
           )
         })
       }
@@ -961,22 +953,20 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
       
       for (i in 1:length(CellType.list)) {
         try({
-          tiff(file = paste0(Sep_Cla3_Volcano.Path, CellType.list[i],".tif"), 
+          tiff(file = paste0(Save.Path,"/",Sep_Cla3_Volcano.Path,"/",Sep_Cla3_Volcano.Path,"_",CellType.list[i],".tif"), 
                width = 17, height = 17, units = "cm", res = 200)
           print(VolcanoPlot(CCMarker_Male.lt[[i]][[paste0(ProjectName, "Marker.S")]],
                             CCMarker_Male.lt[[i]][[paste0(ProjectName, "Marker.S_Pos_List")]],
                             CCMarker_Male.lt[[i]][[paste0(ProjectName, "Marker.S_Neg_List")]])+ 
-                  ggtitle(paste0(ProjectName,"_",ClassSet3[1],"_",CellType.list[i]))
+                  ggtitle(paste0(ProjectName,"_",ClassSet3.set[1],"_",CellType.list[i]))
           )
           
           graphics.off()
         })
       }
-      rm(i)
+      rm(i,Sep_Cla3_FMar.Path)
     
     ##-------------- Find Marker gene in Female --------------##
-      CellType.list <- as.character(unique(scRNA.SeuObj@meta.data[["celltype"]]))
-      # CellType.list <- CellType.list[-9] 
       Sep_Cla3_FMar.Path <- paste0(ProjectName,"_",Sampletype,"_Separate_",ClassSet3.set[2],"_FindMarkers")
       dir.create(paste0(Save.Path, "/", Sep_Cla3_FMar.Path))
       
@@ -1002,7 +992,7 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
       
       
       ## Generate pdf and tif file for Female VolcanoPlot
-      Sep_Cla3_Volcano.Path <- paste0(ProjectName,"_Separate_",ClassSet3.set[2],"_VolcanoPlot")
+      Sep_Cla3_Volcano.Path <- paste0(ProjectName,"_",Sampletype,"_Separate_",ClassSet3.set[2],"_VolcanoPlot")
       dir.create(paste0(Save.Path,"/",Sep_Cla3_Volcano.Path ))
       
       # dir.create(paste0(Save.Path,"/PBMC_SSA_Female_VolcanoPlot/"))
@@ -1014,7 +1004,7 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
             print(VolcanoPlot(CCMarker_Female.lt[[i]][[paste0(ProjectName, "Marker.S")]],
                               CCMarker_Female.lt[[i]][[paste0(ProjectName, "Marker.S_Pos_List")]],
                               CCMarker_Female.lt[[i]][[paste0(ProjectName, "Marker.S_Neg_List")]], ShowGeneNum = 6)+ 
-                    ggtitle(paste0(ProjectName,"_",ClassSet3[2],"_",CellType.list[i]))
+                    ggtitle(paste0(ProjectName,"_",ClassSet3.set[2],"_",CellType.list[i]))
             )
           })
         }
@@ -1023,28 +1013,24 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
         
         for (i in 1:length(CellType.list)) {
           try({
-            tiff(file = paste0(Sep_Cla3_Volcano.Path, CellType.list[i],".tif"), 
+            tiff(file = paste0(Save.Path,"/",Sep_Cla3_Volcano.Path,"/",Sep_Cla3_Volcano.Path,"_",CellType.list[i],".tif"), 
                  width = 17, height = 17, units = "cm", res = 200)
             print(VolcanoPlot(CCMarker_Female.lt[[i]][[paste0(ProjectName, "Marker.S")]],
                               CCMarker_Female.lt[[i]][[paste0(ProjectName, "Marker.S_Pos_List")]],
                               CCMarker_Female.lt[[i]][[paste0(ProjectName, "Marker.S_Neg_List")]])+ 
-                    ggtitle(paste0(ProjectName,"_",ClassSet3[2],"_",CellType.list[i]))
+                    ggtitle(paste0(ProjectName,"_",ClassSet3.set[2],"_",CellType.list[i]))
             )
             
             graphics.off()
         })
       }
-      rm(i)
+      rm(i,Sep_Cla3_FMar.Path)
       
-    save.image(paste0(Save.Path,"/08_1_Find_",ProjectName,"_",Sampletype,"_marker_in_different_Cell_type_and_VolcanoPlot(Separate).RData"))
+save.image(paste0(Save.Path,"/08_1_Find_",Sampletype,"_",ProjectName,"marker_in_different_Cell_type_and_VolcanoPlot(Separate).RData"))
     
     
-##### 08_1 Find CCmarker in different Cell type and VennDiagrame (SSA_IntersectCT) ########
+##### 08_2 Find CCmarker in different Cell type and VennDiagrame (SSA_IntersectCT) ########
   ##-------------- Intersect_CellType --------------##
-  #CCMarker_Male_Ori.lt <- CCMarker_Male.lt
-  #CCMarker_Female_Ori.lt <- CCMarker_Female.lt   
-  #CellType_Ori.list <- CellType.list
-  
   intersect_CellType <- intersect(names(CCMarker_Male.lt),names(CCMarker_Female.lt))
   
   CCMarker_Male.lt <- CCMarker_Male.lt[names(CCMarker_Male.lt) %in% intersect_CellType]
@@ -1081,49 +1067,48 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
       names(Venn_CCMarker_Neg)[[i]] <- paste0("Venn_",ProjectName,"Marker.",CellType.list[i],"_Neg")
     })
   }
-  rm(i)
+  rm(i,Sep_Cla3_Venn.Path)
   
-  save.image(paste0(Save.Path,"/08_1_Find_",ProjectName,"_",Sampletype,"marker_in_different_Cell_type_and_Venn.RData"))
+  save.image(paste0(Save.Path,"/08_2_Find_",Sampletype,"_",ProjectName,"marker_in_different_Cell_type_and_Venn.RData"))
   
   
-##### 08_2 Find CCmarker in different Cell type and VolcanoPlot (SPA) ########
+##### 08_3 Find CCmarker in different Cell type and VolcanoPlot (SPA) ########
   ### Define group by different phenotype ###
   source("FUN_Find_Markers.R")
   
   Idents(scRNA.SeuObj) <- "celltype.Cachexia"
-  #CellType.list <- as.character(unique(scRNA.SeuObj@meta.data[["celltype"]]))
-  Sep_Cla3_Volcano.Path <- paste0(ProjectName,"_",Sampletype,"_Pooled_",ClassSet3[1],"_VolcanoPlot")
-  dir.create(paste0(Save.Path,"/",Sep_Cla3_Volcano.Path))
+  Sep_Cla3_FMar.Path <- paste0(ProjectName,"_",Sampletype,"_Pooled_FindMarkers")
+  dir.create(paste0(Save.Path,"/",Sep_Cla3_FMar.Path))
   
   CCMarker_SPA.lt <- list()
   for(i in c(1:length(CellType.list))){ 
     try({
       CCMarker_SPA.lt[[i]] <- Find_Markers(scRNA.SeuObj, 
-                                           paste0(CellType.list[i],"_EO"), 
-                                           paste0(CellType.list[i],"_LO"),
+                                           paste0(CellType.list[i],"_",ClassSet2.set[1]), 
+                                           paste0(CellType.list[i],"_",ClassSet2.set[2]),
                                            CellType.list[i],
                                            Path = Save.Path,
-                                           ResultFolder =  paste0(ProjectName,"_",Sampletype,"_Pooled_FindMarkers"))
+                                           ResultFolder =  Sep_Cla3_FMar.Path)
       
       # names(CCMarker_SPA.lt)[[i]] <- paste0("CCMarker_SPA.lt.",CellType.list[i])
       names(CCMarker_SPA.lt)[[i]] <- paste0(CellType.list[i])
     })
   }
-  rm(i)
+  rm(i,Sep_Cla3_FMar.Path)
   
   CCMarker_SPA.lt <- CCMarker_SPA.lt[!unlist(lapply(CCMarker_SPA.lt,is.null))]
   
   
-  ## Generate pdf and tif file for VolcanoPlot 
-  dir.create(paste0(Save.Path,"/PBMC_SPA_VolcanoPlot/"))
-  
-  pdf(file = paste0(Save.Path,"/PBMC_SPA_VolcanoPlot/PBMC_SPA_VolcanoPlot.pdf"),width = 7, height = 7 )
+  ## Generate pdf and tif file for VolcanoPlot
+  Sep_Cla3_Volcano.Path <- paste0(ProjectName,"_",Sampletype,"_Pooled_",ClassSet3[1],"_VolcanoPlot")
+  dir.create(paste0(Save.Path,"/",Sep_Cla3_Volcano.Path))
+  pdf(file = paste0(Save.Path,"/",Sep_Cla3_Volcano.Path,"/",Sep_Cla3_Volcano.Path,".pdf"),width = 7, height = 7 )
   for (i in 1:length(CellType.list)) {
     try({
-      print(VolcanoPlot(CCMarker_SPA.lt[[i]][["CCMarker.S"]],
-                        CCMarker_SPA.lt[[i]][["CCMarker.S_Pos_List"]],
-                        CCMarker_SPA.lt[[i]][["CCMarker.S_Neg_List"]], ShowGeneNum = 6)+ 
-              ggtitle(paste0("PBMC_",CellType.list[i]))
+      print(VolcanoPlot(CCMarker_SPA.lt[[i]][[paste0(ProjectName,"Marker.S")]],
+                        CCMarker_SPA.lt[[i]][[paste0(ProjectName,"Marker.S_Pos_List")]],
+                        CCMarker_SPA.lt[[i]][[paste0(ProjectName,"Marker.S_Neg_List")]], ShowGeneNum = 6)+ 
+              ggtitle(paste0(Sampletype,"_",CellType.list[i]))
       )
     })
   }
@@ -1133,18 +1118,19 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
   
   for (i in 1:length(CellType.list)) {
     try({
-      tiff(file = paste0(Save.Path,"/PBMC_SPA_VolcanoPlot/PBMC_SPA_VolcanoPlot",CellType.list[i],".tif"), width = 17, height = 17, units = "cm", res = 200)
-      print(VolcanoPlot(CCMarker_SPA.lt[[i]][["CCMarker.S"]],
-                        CCMarker_SPA.lt[[i]][["CCMarker.S_Pos_List"]],
-                        CCMarker_SPA.lt[[i]][["CCMarker.S_Neg_List"]])+ ggtitle(paste0("PBMC_",CellType.list[i]))
+      tiff(file = paste0(Save.Path,"/",Sep_Cla3_Volcano.Path,"/",Sep_Cla3_Volcano.Path,"_",CellType.list[i],".tif"), width = 17, height = 17, units = "cm", res = 200)
+      print(VolcanoPlot(CCMarker_SPA.lt[[i]][[paste0(ProjectName,"Marker.S")]],
+                        CCMarker_SPA.lt[[i]][[paste0(ProjectName,"Marker.S_Pos_List")]],
+                        CCMarker_SPA.lt[[i]][[paste0(ProjectName,"Marker.S_Neg_List")]])+ 
+                        ggtitle(paste0(Sampletype,"_",CellType.list[i]))
       )
       
       graphics.off()
     })
   }
-  rm(i)
+  rm(i,Sep_Cla3_Volcano.Path)
   
-  save.image(paste0(Save.Path,"/08_2_Find_CCmarker_in_different_Cell_type_and_VolcanoPlot(Pooled).RData"))
+save.image(paste0(Save.Path,"/08_3_Find__",Sampletype,"_",ProjectName,"marker_in_different_Cell_type_and_VolcanoPlot(Pooled).RData"))
   
 ################## (Pending) CCmarker matrix (Heatmap) ##################   
 ################## (Pending) CCmarker matrix LogFC (Heatmap) ##################  
@@ -1165,21 +1151,70 @@ save.image(paste0(Save.Path,"/07_Count_Cell_number.RData"))
                              col.names = 1:max(count.fields(paste0(getwd(),"/GSEA_Geneset_Pathway_3Database_WithoutFilter.txt"))),
                              header = F,sep = "\t")
   
-  # Convert Human gene to mouse
-  Pathway.all.MM = as.data.frame(matrix(nrow=nrow(Pathway.all),ncol=ncol(Pathway.all)*1.5))
-  for (i in 1:nrow(Pathway.all)) {
-    #Pathway.all[,i] <- data.frame(colnames(Pathway.all)[i]=Pathway.all[,i]) %>% HSsymbol2MMsymbol(.,colnames(Pathway.all)[i])
-    PathwayN <- data.frame(Pathway.all[i,3:ncol(Pathway.all)]) %>% t() 
-    colnames(PathwayN)="Test"
-    PathwayN <- HSsymbol2MMsymbol(PathwayN,"Test")
-    Pathway.all.MM[i,1:length(unique(PathwayN$MM.symbol))] <- unique(PathwayN$MM.symbol)
+  ##### Converting the Human gene name to Mouse gene name ##### 
+    # #  Need to be optimized
+    # # (Method1) bind the different length of column (Cannot use rbind)
+    # # (Method2) Save the data as list first and than use do.call() to unlist to have dataframe
+    # 
+    # ## (Ori method)
+    # Pathway.all.MM = as.data.frame(matrix(nrow=nrow(Pathway.all),ncol=ncol(Pathway.all)*2))
+    # for (i in 1:nrow(Pathway.all)) {
+    #   #Pathway.all[,i] <- data.frame(colnames(Pathway.all)[i]=Pathway.all[,i]) %>% HSsymbol2MMsymbol(.,colnames(Pathway.all)[i])
+    #   PathwayN <- data.frame(Pathway.all[i,3:ncol(Pathway.all)]) %>% t() 
+    #   colnames(PathwayN)="Temp"
+    #   PathwayN <- HSsymbol2MMsymbol(PathwayN,"Temp")
+    #   Pathway.all.MM[i,1:length(unique(PathwayN$MM.symbol))] <- unique(PathwayN$MM.symbol)
+    # }
+    # 
+    # Pathway.all.MM <- data.frame(Pathway.all[,1:2],Pathway.all.MM)
+    # colnames(Pathway.all.MM) <- seq(1:ncol(Pathway.all.MM))
+    # 
+    # rm(PathwayN)
+    # 
+    # # assign(paste0("marrow_sub_DucT2_TOP2ACenter_T", i),marrow_sub_DucT2_TOP2ACenter_Tn)
+    # # assign(colnames(Pathway.all)[i],Pathway.all[,i])
     
-  }
+    ## (Method1)
+    # Refer # https://stackoverflow.com/questions/3699405/how-to-cbind-or-rbind-different-lengths-vectors-without-repeating-the-elements-o
+    # How to cbind or rbind different lengths vectors without repeating the elements of the shorter vectors?
+    ## Modify by Charlene: Can use in MultRow
+    bind_diff <- function(x, y){
+      if(ncol(x) > ncol(y)){
+        len_diff <- ncol(x) - ncol(y)
+        y <- data.frame(y, rep(NA, len_diff) %>% t() %>% as.data.frame())
+        colnames(x) <- seq(1:ncol(x))
+        colnames(y) <- seq(1:ncol(y))
+      }else if(ncol(x) < ncol(y)){
+        len_diff <- ncol(y) - ncol(x)
+        x <- data.frame(x, rep(NA, len_diff) %>% t() %>% as.data.frame())
+        colnames(x) <- seq(1:ncol(x))
+        colnames(y) <- seq(1:ncol(y))
+      }
+      rbind(x, y) 
+    }
+    
+    ## Converting
+    for (i in 1:nrow(Pathway.all)) {
+      PathwayN <- data.frame(Pathway.all[i,3:ncol(Pathway.all)]) %>% t()  %>% as.data.frame()
+      colnames(PathwayN)="Temp"
+      PathwayN <- HSsymbol2MMsymbol(PathwayN,"Temp")
+      PathwayN <- PathwayN[!PathwayN$MM.symbol  == 0,]
+      PathwayN <- PathwayN[!is.na(PathwayN$MM.symbol),]
+      if(i==1){
+        Pathway.all.MM <- unique(PathwayN$MM.symbol) %>% t()  %>% as.data.frame()
+      }else{
+        Pathway.all.MM <- bind_diff(Pathway.all.MM,unique(PathwayN$MM.symbol) %>% t()  %>% as.data.frame())
+        # Pathway.all.MM[i,1:length(unique(PathwayN$MM.symbol))] <- unique(PathwayN$MM.symbol)
+      }
+    }
+    
+    Pathway.all.MM <- data.frame(Pathway.all[,1:2],Pathway.all.MM)
+    colnames(Pathway.all.MM) <- seq(1:ncol(Pathway.all.MM))
+    #Pathway.all.MM[Pathway.all.MM==0] <-NA
+    
+    rm(PathwayN)
   
-  Pathway.all.MM <- data.frame(Pathway.all[,1:2],Pathway.all.MM)
-  colnames(Pathway.all.MM) <- seq(1:ncol(Pathway.all.MM))
-  
-  save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
+save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   
 ##### 09_1 GSEA Analysis (SPA) #####
   GSEA_Large <- list()
