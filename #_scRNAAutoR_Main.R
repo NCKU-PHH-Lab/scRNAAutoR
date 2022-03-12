@@ -17,6 +17,7 @@
   
 ##### Function setting  ##### 
   ## Call function
+  source("FUN_ReadscRNA.R")
   source("FUN_Cal_Mit.R")
   source("FUN_scRNAQC.R")
   source("FUN_Find_Markers.R")
@@ -29,12 +30,6 @@
   source("FUN_GSEA_ggplot.R")
 
 ##### Current path and new folder setting*  ##### 
-  ## GSE103322 HNSC
-  # Version = paste0(Sys.Date(),"_","HNSC")
-  # Save.Path = paste0(getwd(),"/",Version)
-  # dir.create(Save.Path)
-  # 
-  # FileName = paste0("GSE103322_HNSCC_all_data/HNSCC_all_data.txt")
   ProjectName = "CC"
   Sampletype = "PBMC"
   Version = paste0(Sys.Date(),"_","CC_PBMC")
@@ -52,44 +47,13 @@
   ClassSet3 = "Sex"
   
 ##### Load datasets  #####
-  ################## (Pending) Expression Matrix Datasets ################## 
-  # ## GSE103322 HNSC
-  # GeneExp.df <- read.table(InputFolder, header=T, row.names = 1, sep="\t")
-  # #raw_counts <- GeneExp.df[6:nrow(GeneExp.df),]
-  # scRNA.SeuObj <- CreateSeuratObject(counts = GeneExp.df[6:nrow(GeneExp.df),],
-  #                              min.cells = 3, min.genes = 200, 
-  #                              project = "HNSC")
-  # scRNA.SeuObj <- NormalizeData(scRNA.SeuObj)
-  # scRNA.SeuObj <- FindVariableFeatures(scRNA.SeuObj, selection.method = "vst", nfeatures = 2000)
-  # scRNA.SeuObj@meta.data[["sample"]] <- GeneExp.df[5,] %>% as.character()
-  
-  # list_files.set <- list.files(InputFolder,full.names = T)
-  # Nfiles = length(list_files.set)
-
-  ##### 10x Datasets #####
-  #### Cachexia
-  
   ## Annotation table
   list_files.df <- read.csv(paste0(InputFolder,"/",InputAnno))
   Feature.set <- colnames(list_files.df)[-1]
   
   ## Read 10x files
-  scRNA_SeuObj.list <- list()
-  for(i in 1:nrow(list_files.df)){
-    Folder <- list_files.df$Folder[i]
-    Data.dgCMatrix <- Read10X(data.dir = paste0(InputFolder,"/", Folder, "/monocle/outs/filtered_gene_bc_matrices/mm10"))
-    Data.SeuObj <- CreateSeuratObject(counts = Data.dgCMatrix, project = ProjectName, min.cells = 3, min.features = 200)
-    
-    for (j in 1:(ncol(list_files.df)-1)) {
-      Data.SeuObj@meta.data[[colnames(list_files.df)[j+1]]] <- rep(list_files.df[i,j+1], 
-                                                                   times=length(Data.SeuObj@meta.data[["orig.ident"]]))
-    }
-    
-    scRNA_SeuObj.list[[i]] <- Data.SeuObj
-    names(scRNA_SeuObj.list)[[i]] <- list_files.df$Folder[i]
-  }
-  rm(i,j,Folder,Data.dgCMatrix,Data.SeuObj)
-
+  scRNA_SeuObj.list <- ReadscRNA(InputFolder, list_files.df, Mode="10x")
+  
 ##### 01 Combine different datasets before QC  #####  
 
   # normalize and identify variable features for each dataset independently
