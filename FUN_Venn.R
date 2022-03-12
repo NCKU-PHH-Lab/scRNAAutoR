@@ -8,7 +8,8 @@
 
 #####----------------------------- Function -----------------------------#####
 
-Venn_Intersect <- function(setA, setB,CellType.list,Type,ColorA,ColorB,SampleType="PBMC",PathName = getwd()) {
+Venn_Intersect <- function(setA, setB,CellType.list,Type,ColorA,ColorB,SampleType="PBMC",PathName = getwd(),
+                           ClassSet3_1 = "A", ClassSet3_2 = "B") {
   ##-------------- Intersect --------------##
   Intersect_AB <- intersect(setA, setB)
   Union_AB <- union(setA, setB)
@@ -31,7 +32,7 @@ Venn_Intersect <- function(setA, setB,CellType.list,Type,ColorA,ColorB,SampleTyp
   B <- na.omit(setB)
 
    venn.diagram(x = list(A, B) ,
-               category.names = c(paste0("M.",CellType.list), paste0("F.",CellType.list)),
+               category.names = c(paste0(ClassSet3_1,".",CellType.list), paste0(ClassSet3_2,".",CellType.list)),
                filename = paste0(PathName, "/IMGVenn_",SampleType,"_",Type,"_",CellType.list,".png"),
   #             output=TRUE,
                imagetype="png",
