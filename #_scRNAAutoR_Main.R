@@ -52,31 +52,42 @@
   list_files.df <- read.csv(paste0(InputFolder,"/",InputAnno))
   Feature.set <- colnames(list_files.df)[-1]
   
+  scAnno.df <- data.frame()
+  Folder <- list_files.df$Folder[1]
+  scAnno.df <- read.table(paste0(InputFolder,"/", Folder, "/Anno.tsv"),
+                          header=T, row.names = 1, sep="\t")
+  
   ## Read 10x files
   scRNA_SeuObj.list <- ReadscRNA(InputFolder, list_files.df, Mode="10x")
   
 ##### 01 Combine different datasets before QC  #####  
 
-  # normalize and identify variable features for each dataset independently
-  set.seed(1) # Fix the seed
-  scRNA_SeuObj.list <- lapply(X = scRNA_SeuObj.list, FUN = function(x) {
-    x <- NormalizeData(x)
-    x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
-  })
-  
-  # select features that are repeatedly variable across datasets for integration
-  set.seed(1) # Fix the seed
-  features <- SelectIntegrationFeatures(object.list = scRNA_SeuObj.list)
-  
-  ## Perform integration
-  set.seed(1) # Fix the seed
-  scRNA.anchors <- FindIntegrationAnchors(object.list = scRNA_SeuObj.list, anchor.features = features)
-  # this command creates an 'integrated' data assay
-  set.seed(1) # Fix the seed
-  scRNA.SeuObj <- IntegrateData(anchorset = scRNA.anchors)
-  
-  set.seed(1) # Fix the seed
-  DefaultAssay(scRNA.SeuObj) <- "integrated"
+  if(length(scRNA_SeuObj.list)==1){
+    scRNA.SeuObj <- scRNA_SeuObj.list[[1]]
+  }else{
+    # normalize and identify variable features for each dataset independently
+    set.seed(1) # Fix the seed
+    scRNA_SeuObj.list <- lapply(X = scRNA_SeuObj.list, FUN = function(x) {
+      x <- NormalizeData(x)
+      x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+    })
+    
+    # select features that are repeatedly variable across datasets for integration
+    set.seed(1) # Fix the seed
+    features <- SelectIntegrationFeatures(object.list = scRNA_SeuObj.list)
+    
+    ## Perform integration
+    set.seed(1) # Fix the seed
+    scRNA.anchors <- FindIntegrationAnchors(object.list = scRNA_SeuObj.list, anchor.features = features)
+    # this command creates an 'integrated' data assay
+    set.seed(1) # Fix the seed
+    scRNA.SeuObj <- IntegrateData(anchorset = scRNA.anchors)
+    
+    set.seed(1) # Fix the seed
+    DefaultAssay(scRNA.SeuObj) <- "integrated"
+    
+  }
+    
   
   save.image(paste0(Save.Path,"/01_Combine_different_datasets_before_QC.RData"))     
   
@@ -111,26 +122,29 @@
   
   
 ##### 03 Combine different data sets after QC  #####
-
-  # normalize and identify variable features for each dataset independently
-  set.seed(1) # Fix the seed
-  scRNA_SeuObj_QC.list <- lapply(X = scRNA_SeuObj_QC.list, FUN = function(x) {
-    x <- NormalizeData(x)
-    x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
-  })
-  
-  # select features that are repeatedly variable across datasets for integration
-  set.seed(1) # Fix the seed
-  features <- SelectIntegrationFeatures(object.list = scRNA_SeuObj_QC.list)
-  
-  ## Perform integration
-  set.seed(1) # Fix the seed
-  scRNA.anchors <- FindIntegrationAnchors(object.list = scRNA_SeuObj_QC.list, anchor.features = features)
-  # this command creates an 'integrated' data assay
-  set.seed(1) # Fix the seed
-  scRNA.SeuObj <- IntegrateData(anchorset = scRNA.anchors)
-  
-  
+  if(length(scRNA_SeuObj_QC.list)==1){
+    scRNA.SeuObj <- scRNA_SeuObj_QC.list[[1]]
+  }else{
+    # normalize and identify variable features for each dataset independently
+    set.seed(1) # Fix the seed
+    scRNA_SeuObj_QC.list <- lapply(X = scRNA_SeuObj_QC.list, FUN = function(x) {
+      x <- NormalizeData(x)
+      x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+    })
+    
+    # select features that are repeatedly variable across datasets for integration
+    set.seed(1) # Fix the seed
+    features <- SelectIntegrationFeatures(object.list = scRNA_SeuObj_QC.list)
+    
+    ## Perform integration
+    set.seed(1) # Fix the seed
+    scRNA.anchors <- FindIntegrationAnchors(object.list = scRNA_SeuObj_QC.list, anchor.features = features)
+    # this command creates an 'integrated' data assay
+    set.seed(1) # Fix the seed
+    scRNA.SeuObj <- IntegrateData(anchorset = scRNA.anchors)
+    
+  }
+    
   ## Check QC
   scRNAQC(scRNA.SeuObj,AddMitInf = "No",CheckOnly="Yes",FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_QC_Check"))
   
@@ -158,7 +172,7 @@
   ##?
   set.seed(1) # Fix the seed
   scRNA.SeuObj <- ScaleData(scRNA.SeuObj, verbose = FALSE)
-  
+  AnnoNames.set <- colnames(scRNA.SeuObj@meta.data)
   # ## Run if use filter
   # set.seed(1) # Fix the seed
   # scRNA.SeuObj <- FindVariableFeatures(scRNA.SeuObj)
@@ -229,18 +243,18 @@
       BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, LegTextSize = 14)
   
    
-    for (i in 1:(ncol(list_files.df)-1)) {
-      print(DimPlot(scRNA.SeuObj, reduction = "umap", group.by = colnames(list_files.df)[i+1]) %>% 
+    for (i in 1:(ncol(list_files.df)+ nrow(scAnno.df)-1)) {
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", group.by = AnnoNames.set[i+3]) %>% 
             BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
               theme(plot.title = element_text(vjust = 0.85)))
-      print(DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2, split.by = AnnoNames.set[i+3], label = TRUE, label.size = 4) %>% 
               BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
                              SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
       
-      print(DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = colnames(list_files.df)[i+1]) %>% 
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = AnnoNames.set[i+3]) %>% 
               BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
               theme(plot.title = element_text(vjust = 0.85)))
-      print(DimPlot(scRNA.SeuObj, reduction = "tsne", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", ncol = 2, split.by = AnnoNames.set[i+3], label = TRUE, label.size = 4) %>% 
               BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
                              SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
       
@@ -497,18 +511,18 @@ save.image(paste0(Save.Path,"/05_Identify_conserved_cell_type_markers.RData"))
       BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, LegTextSize = 14)
     
     
-    for (i in 1:(ncol(list_files.df)-1)) {
-      print(DimPlot(scRNA.SeuObj, reduction = "umap", group.by = colnames(list_files.df)[i+1]) %>% 
+    for (i in 1:(ncol(list_files.df)+nrow(scAnno.df)-1)) {
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", group.by = AnnoNames.set[i+3]) %>% 
               BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
               theme(plot.title = element_text(vjust = 0.85)))
-      print(DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+      print(DimPlot(scRNA.SeuObj, reduction = "umap", ncol = 2, split.by = AnnoNames.set[i+3], label = TRUE, label.size = 4) %>% 
               BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
                              SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
       
-      print(DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = colnames(list_files.df)[i+1]) %>% 
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", group.by = AnnoNames.set[i+3]) %>% 
               BeautifyggPlot(.,TV= -5,TitleSize = 25,LegPos = c(0.8, 0.15),AxisTitleSize=1.2, LegTextSize = 18)+ 
               theme(plot.title = element_text(vjust = 0.85)))
-      print(DimPlot(scRNA.SeuObj, reduction = "tsne", ncol = 2, split.by = colnames(list_files.df)[i+1], label = TRUE, label.size = 4) %>% 
+      print(DimPlot(scRNA.SeuObj, reduction = "tsne", ncol = 2, split.by = AnnoNames.set[i+3], label = TRUE, label.size = 4) %>% 
               BeautifyggPlot(.,LegPos = c(1, 0.5),AxisTitleSize=1.2, TitleSize = 20,
                              SubTitSize = 17, LegTextSize = 14, XaThick=0.9, YaThick=0.9,OL_Thick = 1.5))
       
