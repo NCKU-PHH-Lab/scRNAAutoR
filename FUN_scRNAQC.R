@@ -3,7 +3,7 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
                     PtSize=0, SpeciSet = "Mouse",
                     AddMitInf = "Yes", # Add mitochondria information
                     CheckOnly="No", # CheckOnly = "Yes": Just plot the Fig
-                    FileName = "QC",NAno=2){   
+                    FileName = "QC",NAno=1){   
 
     ## https://hbctraining.github.io/scRNA-seq/lessons/04_SC_quality_control.html
     ## QC for scRNA Data
@@ -19,12 +19,13 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
       }else{
         PBMC.combined_QC <- PBMC.combined_QC
       }
+        metadata_ori <- PBMC.combined_QC@meta.data
         # Visualize QC metrics as a violin plot
         # VlnPlot(PBMC.combined_QC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3) # from Seruat
         VlnPlot.PBMC <- VlnPlot(PBMC.combined_QC, features = c("nGene", "nUMI", "mitoRatio"), ncol = 2, pt.size= PtSize,
-                                group.by=colnames(metadata)[3+NAno])
+                                group.by=colnames(metadata_ori)[3+NAno])
         FSplot1.PBMC <- FeatureScatter(PBMC.combined_QC, feature1 = "nUMI", feature2 = "nGene",
-                                       group.by=colnames(metadata)[3+NAno])
+                                       group.by=colnames(metadata_ori)[3+NAno])
         VlnPlot.PBMC + FSplot1.PBMC
         
         
@@ -33,7 +34,6 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
         ## https://hbctraining.github.io/scRNA-seq/lessons/04_SC_quality_control.html
         # Add number of genes per UMI for each cell to metadata
         PBMC.combined_QC$log10GenesPerUMI <- log10(PBMC.combined_QC$nGene) / log10(PBMC.combined_QC$nUMI)
-        
         metadata <- PBMC.combined_QC@meta.data
         
         ## Cell counts
