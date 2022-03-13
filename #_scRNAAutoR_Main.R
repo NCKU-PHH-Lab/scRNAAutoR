@@ -40,6 +40,7 @@
   InputFolder = "Input_files_10x" 
   InputAnno = "PBMC_Ano.csv"
 
+  InputGSEA = "GSEA_Geneset_Pathway_3Database_WithoutFilter.txt"
 
 ##### Parameter setting* #####
   ClassSet1 = 1
@@ -87,7 +88,8 @@
   ## QC for all samples
   scRNA_Ori.SeuObj <- scRNA.SeuObj # Save the original obj
   #Test# scRNA.SeuObj_Ori.list <- SplitObject(scRNA.SeuObj_Ori, split.by = "ID")
-  scRNA.SeuObj_QCTry <- scRNAQC(scRNA.SeuObj,FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_QCTry"))
+  scRNA.SeuObj_QCTry <- scRNAQC(scRNA.SeuObj,FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_QCTry"),NAno=1)
+  
   rm(scRNA.anchors,scRNA.SeuObj,scRNA.SeuObj_QCTry)
   
   # specify that we will perform downstream analysis on the corrected data note that the
@@ -1113,8 +1115,8 @@ save.image(paste0(Save.Path,"/08_3_Find__",Sampletype,"_",ProjectName,"marker_in
   
   # Geneset from GSEA
   # Pathway.all <- read.delim(paste0(getwd(),"/Pathway.all.v7.4.symbols.gmt"),header = F)
-  Pathway.all <- read.delim2(paste0(getwd(),"/GSEA_Geneset_Pathway_3Database_WithoutFilter.txt"),
-                             col.names = 1:max(count.fields(paste0(getwd(),"/GSEA_Geneset_Pathway_3Database_WithoutFilter.txt"))),
+  Pathway.all <- read.delim2(paste0(getwd(),"/",InputGSEA),
+                             col.names = 1:max(count.fields(paste0(getwd(),"/",InputGSEA))),
                              header = F,sep = "\t")
   
   ##### Converting the Human gene name to Mouse gene name ##### 
@@ -1183,15 +1185,19 @@ save.image(paste0(Save.Path,"/08_3_Find__",Sampletype,"_",ProjectName,"marker_in
 save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   
 ##### 09_1 GSEA Analysis (SPA) #####
+  ## Create folder
+  Sep_Cla3_GSEA.Path <- paste0(Sampletype,"_",ProjectName,"_GSEA")
+  dir.create(paste0(Save.Path,"/",Sep_Cla3_GSEA.Path))
+
+
   GSEA_Large <- list()
   GSEA_Large.df <- as.data.frame(matrix(nrow=0,ncol=10))
   colnames(GSEA_Large.df) <- c("GeneType","PhenoType","pathway","pval","padj","log2err","ES", "NES" ,"size","leadingEdge")
   GSEA_Large.df.TOP <- GSEA_Large.df
   
-  dir.create(paste0(Save.Path,"/PBMC_GSEA"))
-  
-  
-  pdf(file = paste0(Save.Path, "/PBMC_GSEA/PBMC_GSEA_SPA.pdf"),width = 15, height = 7 )
+
+
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,".pdf"),width = 15, height = 7 )
   
   for(i in 1:length(CellType.list)){
     
@@ -1220,11 +1226,13 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
     plotGseaTable(pathwaysH[topPathways$pathway], 
                   ranks, 
                   fgseaRes, 
-                  gseaParam = 0.5) + title( paste0("PBMC.",CellType.list[i]), adj = 0, line =3)
+                  gseaParam = 0.5) + title( paste0(Sampletype,".",ProjectName,".",CellType.list[i]), adj = 0, line =3)
     
-    plotEnrichment_Pos1 <- plotEnrichment(pathwaysH[[as.character(topPathways[1,1])]], ranks)+ labs(title= paste0("PBMC.",CellType.list[i],": ",as.character(topPathways[1,1])))
+    plotEnrichment_Pos1 <- plotEnrichment(pathwaysH[[as.character(topPathways[1,1])]], ranks)+ 
+                           labs(title= paste0(ampletype,".",ProjectName,".",CellType.list[i],": ",as.character(topPathways[1,1])))
     #plotEnrichment_Pos1
-    plotEnrichment_Neg1 <- plotEnrichment(pathwaysH[[as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])]], ranks)+ labs(title= paste0("PBMC.",CellType.list[i],": ",as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])))
+    plotEnrichment_Neg1 <- plotEnrichment(pathwaysH[[as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])]], ranks)+ 
+                           labs(title= paste0(ampletype,".",ProjectName,".",CellType.list[i],": ",as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])))
     #plotEnrichment_Neg1
     
     Sum <- list(gseaDat,ranks,pathwaysH,fgseaRes,plotEnrichment_Pos1,plotEnrichment_Neg1)
@@ -1249,7 +1257,7 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   ## GSEA_Large.Sum.TOP ##
   GSEA_Large.Sum.TOP <- rbind(GSEA_Large.df.TOP)
   GSEA_Large.Sum.TOP <- GSEA_Large.Sum.TOP[,!colnames(GSEA_Large.Sum.TOP) %in% c("leadingEdge")]
-  write.table(GSEA_Large.Sum.TOP, file=paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Pathway_LargeTOP_SPA.txt"),sep="\t",
+  write.table(GSEA_Large.Sum.TOP, file=paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_Pathway_LargeTOP_SPA.txt"),sep="\t",
               row.names=F, quote = FALSE)
   
   ##### Bubble plot #####
@@ -1267,12 +1275,12 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   # GSEA_Large.Sum.TOP.S <- GSEA_Large.Sum.TOP[abs(GSEA_Large.Sum.TOP$padj) < 0.25,]
   # GSEA_Large.Sum.TOP.S <- GSEA_Large.Sum.TOP.S[abs(GSEA_Large.Sum.TOP.S$pval) < 0.05,]
   
-  pdf(file = paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Bubble_SPA.pdf"),width = 17, height = 12 )
-  GSEA_ggplot_SPA.lt[["BBPlot_Ori"]]
-  GSEA_ggplot_SPA.lt[["BBPlot"]]
-  GSEA_ggplot_SPA.lt[["BBPlot2"]]
-  GSEA_ggplot_SPA.lt[["BBPlotB1"]]
-  GSEA_ggplot_SPA.lt[["BBPlotB1"]]
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_Bubble_SPA.pdf"),width = 17, height = 12 )
+    GSEA_ggplot_SPA.lt[["BBPlot_Ori"]]
+    GSEA_ggplot_SPA.lt[["BBPlot"]]
+    GSEA_ggplot_SPA.lt[["BBPlot2"]]
+    GSEA_ggplot_SPA.lt[["BBPlotB1"]]
+    GSEA_ggplot_SPA.lt[["BBPlotB1"]]
   dev.off()
   
   
@@ -1302,7 +1310,7 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   BBPlot_TB1
   
   
-  pdf(file = paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Bubble_SPA_SubType_T.pdf"),width = 17, height = 7 )
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_Bubble_SPA_SubType_T.pdf"),width = 17, height = 7 )
   BBPlot_TB
   BBPlot_TB1
   dev.off()
@@ -1327,10 +1335,10 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
     insert_left(GSEA_ggplot_SPA.lt[["Y_Order"]],width = 0.2)
   BBPlot_MacB1
   
-  pdf(file = paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Bubble_SPA_SubType_Mac.pdf"),width = 17, height = 20 )
-  BBPlot_MacB
-  BBPlot_MacB1
-  dev.off()
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_Bubble_SPA_SubType_Mac.pdf"),width = 17, height = 20 )
+    BBPlot_MacB
+    BBPlot_MacB1
+    dev.off()
   
   rm(p2,p3,BBPlotB1,BBPlotB2,BBPlotB,BBPlot_Cluster,df1.1.clust.Pheno,df1.1.clust.Pathway,
      df1.1,df1,BBPlot,BBPlot_Mac,BBPlot_MacB,BBPlot_T,BBPlot_TB)
@@ -1345,7 +1353,7 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   GSEA_Large_Male.df.TOP <- GSEA_Large_Male.df
   
   
-  pdf(file = paste0(Save.Path, "/PBMC_GSEA/PBMC_GSEA_SSA_Male.pdf"),width = 15, height = 7 )
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_SSA_Male.pdf"),width = 15, height = 7 )
   
   for(i in 1:length(CellType.list)){
     
@@ -1376,11 +1384,12 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
     plotGseaTable(pathwaysH[topPathways$pathway], 
                   ranks, 
                   fgseaRes, 
-                  gseaParam = 0.5) + title( paste0("PBMC.",CellType.list[i]), adj = 0, line =3)
+                  gseaParam = 0.5) + title( paste0(Sampletype,".",ProjectName,".",CellType.list[i]), adj = 0, line =3)
     
-    plotEnrichment_Pos1 <- plotEnrichment(pathwaysH[[as.character(topPathways[1,1])]], ranks)+ labs(title= paste0("PBMC.",CellType.list[i],": ",as.character(topPathways[1,1])))
+    plotEnrichment_Pos1 <- plotEnrichment(pathwaysH[[as.character(topPathways[1,1])]], ranks)+ labs(title= paste0(Sampletype,".",ProjectName,".",CellType.list[i],": ",as.character(topPathways[1,1])))
     #plotEnrichment_Pos1
-    plotEnrichment_Neg1 <- plotEnrichment(pathwaysH[[as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])]], ranks)+ labs(title= paste0("PBMC.",CellType.list[i],": ",as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])))
+    plotEnrichment_Neg1 <- plotEnrichment(pathwaysH[[as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])]], ranks)+ 
+                           labs(title= paste0(Sampletype,".",ProjectName,".",CellType.list[i],": ",as.character(topPathways[length(as.data.frame(topPathways)[,1]),1])))
     #plotEnrichment_Neg1
     
     Sum <- list(gseaDat,ranks,pathwaysH,fgseaRes,plotEnrichment_Pos1,plotEnrichment_Neg1)
@@ -1405,7 +1414,7 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   ## GSEA_Large_Male.Sum.TOP ##
   GSEA_Large_Male.Sum.TOP <- rbind(GSEA_Large_Male.df.TOP)
   GSEA_Large_Male.Sum.TOP <- GSEA_Large_Male.Sum.TOP[,!colnames(GSEA_Large_Male.Sum.TOP) %in% c("leadingEdge")]
-  write.table(GSEA_Large_Male.Sum.TOP, file=paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Pathway_LargeTOP_SSA_Male.txt"),sep="\t",
+  write.table(GSEA_Large_Male.Sum.TOP, file=paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"Pathway_LargeTOP_SSA_Male.txt"),sep="\t",
               row.names=F, quote = FALSE)
   
   
@@ -1420,7 +1429,7 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   GSEA_ggplot_SSA_Male.lt <- GSEA_ggplot(GSEA_Large_Male.Sum.TOP,NES_Th = 1.5, padj_Th = 0.01)
   GSEA_Large_Male.Sum.TOP.S <- GSEA_ggplot_SSA_Male.lt[["GSEA_TOP.df"]]
   
-  pdf(file = paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Bubble_SSA_Male.pdf"),width = 17, height = 12 )
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_Bubble_SSA_Male.pdf"),width = 17, height = 12 )
   GSEA_ggplot_SSA_Male.lt[["BBPlot_Ori"]]
   GSEA_ggplot_SSA_Male.lt[["BBPlot"]]
   GSEA_ggplot_SSA_Male.lt[["BBPlot2"]]
@@ -1453,7 +1462,7 @@ save.image(paste0(Save.Path,"/09_0_GSEA_Analysis(Geneset_Prepare).RData"))
   BBPlot_TB1
   
   
-  pdf(file = paste0(Save.Path,"/PBMC_GSEA/PBMC_GSEA_Bubble_SSA_Male_SubType_T.pdf"),width = 17, height = 7 )
+  pdf(file = paste0(Save.Path, "/",Sep_Cla3_GSEA.Path,"/",Sep_Cla3_GSEA.Path,"_Bubble_SSA_Male_SubType_T.pdf"),width = 17, height = 7 )
   BBPlot_TB
   BBPlot_TB1
   dev.off()
