@@ -10,7 +10,8 @@
   library("stringr")
   library("magrittr")
   library("dplyr")
-
+  library(fgsea)
+  
   # In fuction
   library("AnnotationHub")
   library(ensembldb)
@@ -20,6 +21,8 @@
   source("FUN_ReadscRNA.R")
   source("FUN_Cal_Mit.R")
   source("FUN_scRNAQC.R")
+  source("FUN_MetaSummary.R")
+  
   source("FUN_Find_Markers.R")
   source("FUN_VolcanoPlot.R")
   source("FUN_Venn.R")
@@ -32,6 +35,8 @@
 ##### Current path and new folder setting*  ##### 
   ProjectName = "CC"
   Sampletype = "PBMC"
+  #ProjSamp.Path = paste0(Sampletype,"_",ProjectName)
+  
   Version = paste0(Sys.Date(),"_","CC_PBMC")
   Save.Path = paste0(getwd(),"/",Version)
   dir.create(Save.Path)
@@ -98,7 +103,7 @@
   
   ## QC for all samples
   scRNA_Ori.SeuObj <- scRNA.SeuObj # Save the original obj
-  #Test# scRNA.SeuObj_Ori.list <- SplitObject(scRNA.SeuObj_Ori, split.by = "ID")
+  #Test# scRNA_Ori.SeuObj.list <- SplitObject(scRNA_Ori.SeuObj, split.by = "ID")
   scRNA.SeuObj_QCTry <- scRNAQC(scRNA.SeuObj,FileName = paste0(Version,"/",ProjectName,"_QC/",ProjectName,"_QCTry"),NAno=1)
   
   rm(scRNA.anchors,scRNA.SeuObj,scRNA.SeuObj_QCTry)
@@ -267,54 +272,18 @@
   save.image(paste0(Save.Path,"/04_Perform_an_integrated_analysis.RData"))        
   
   ##### Meta Table  #####
+  Meta.df <- MetaSummary(scRNA_SeuObj.list, scRNA.SeuObj,
+                         scRNA_SeuObj_QC.list,scRNA_Ori.SeuObj,
+                         SavePath = Version, projectName = paste0("/",ProjectName))
 
-    Meta.df <- data.frame(matrix(nrow = 0,ncol = 3))
-    colnames(Meta.df) <- c("Folder","Cell_Num","Gene_Num")
 
-    ## Before QC
-    for (i in 1:length(scRNA_SeuObj.list)) {
-      Meta.df[i,1] <- names(scRNA_SeuObj.list[i])
-      Meta.df[i,2] <- ncol(scRNA_SeuObj.list[[i]]@assays[["RNA"]]@counts)
-      Meta.df[i,3] <- nrow(scRNA_SeuObj.list[[i]]@assays[["RNA"]]@counts)
-      
-    }
-
-      # Summary to Meta table
-      Meta.df[i+1,1] <- c("Summary")
-      Meta.df[i+1,2] <- ncol(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
-      Meta.df[i+1,3] <- nrow(scRNA.SeuObj_Ori@assays[["RNA"]]@counts)
-    
-    ## After QC
-    for (j in 1:length(scRNA_SeuObj_QC.list)) {
-      Meta.df[i+j+1,1] <- paste0(names(scRNA_SeuObj_QC.list[j]),".QC")
-      Meta.df[i+j+1,2] <- ncol(scRNA_SeuObj_QC.list[[j]]@assays[["RNA"]]@counts)
-      Meta.df[i+j+1,3] <- nrow(scRNA_SeuObj_QC.list[[j]]@assays[["RNA"]]@counts)
-      
-    }
-    
-      # Summary to Meta table
-      Meta.df[i+j+2,1] <- c("Summary.QC")
-      Meta.df[i+j+2,2] <- ncol(scRNA.SeuObj@assays[["RNA"]]@counts)
-      Meta.df[i+j+2,3] <- nrow(scRNA.SeuObj@assays[["RNA"]]@counts)
-      
-    
-    rm(i,j)
-    
-    Meta.df <- left_join(Meta.df,list_files.df, by = "Folder")
-    Meta.df[is.na(Meta.df)] <- ""
-
-  ## Export data        
-  write.table( Meta.df ,
-               file = paste0(Save.Path,"/",ProjectName,"_CellCount_Meta.tsv"),
-               sep = "\t",
-               quote = F,
-               row.names = F
-  )
+################## (Pending) Cell Cycle Regression ##################
   
-
-
-################## (Pending) Cell Cycle Regression ##################    
-################## (Pending) Auto Cell type annotation ##################     
+  
+################## (Pending) Auto Cell type annotation ################## 
+  
+  
+  
 ##### 05 Identify conserved cell type markers  ##### 
   ## Creative Cell type folder
   dir.create(paste0(Save.Path,"/",ProjectName,"_CT"))
@@ -763,12 +732,13 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
         
         CellNum_P3 <- ggplot(Freq_All_Cla.df, aes(x = factor(Cell_Type), y = Number, 
                                                  colour = Pheno_Type,
-                                                 group = Pheno_Type,linetype=Pheno_Type
-        )) + 
+                                                 group = Pheno_Type,linetype=Pheno_Type)) +
+          geom_line(aes(linetype=Pheno_Type))+ 
           geom_line(size=1.5) + 
           scale_linetype_manual(name="Pheno_Type", 
                                 values=c("solid",  "dotted","dotdash", "solid", "dotted", "dotdash"), #  values=c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
-                                labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")) + 
+                                #labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")
+                                ) + 
           scale_color_manual(values = c('#ba0449','#ff52bd','#f0679b','#3d3c99','#5292f2','#33aef5'))+
           geom_point(shape = 12, size = 4, fill = "white") + theme_bw()+
           theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
@@ -785,12 +755,13 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
         
         CellNum_P4 <- ggplot(Freq_All_Cla.df, aes(x = factor(Cell_Type), y = Percent, 
                                                  colour = Pheno_Type,
-                                                 group = Pheno_Type,linetype=Pheno_Type
-        )) + 
+                                                 group = Pheno_Type,linetype=Pheno_Type)) +
+          geom_line(aes(linetype=Pheno_Type))+ 
           geom_line(size=1.5) + 
           scale_linetype_manual(name="Pheno_Type", 
                                 values=c("solid",  "dotted","dotdash", "solid", "dotted", "dotdash"), #  values=c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
-                                labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")) + 
+                                #labels=c("EO","EO.F","EO.M","LO","LO.F","LO.M")
+                                ) + 
           scale_color_manual(values = c('#ba0449','#ff52bd','#f0679b','#3d3c99','#5292f2','#33aef5'))+
           geom_point(shape = 12, size = 4, fill = "white") +
           theme(panel.border = element_blank(),panel.grid.major = element_blank(),
