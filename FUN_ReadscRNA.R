@@ -46,9 +46,9 @@ ReadscRNA = function( InputFolder, list_files.df, Mode="10x" ,ProjectName="") # 
                                      header=T, row.names = 1, sep="\t")
         # scRNA.SeuObj@meta.data[["sample"]] <- GeneExp.df[5,] %>% as.character()
         
-        for (k in 1:nrow(scAnno.df)) {
-          scRNA_SeuObj.list[[i]]@meta.data[[row.names(scAnno.df)[k]]] <- c(scAnno.df[k,] %>% as.character())
-        }
+          for (k in 1:nrow(scAnno.df)) {
+            scRNA_SeuObj.list[[i]]@meta.data[[row.names(scAnno.df)[k]]] <- c(scAnno.df[k,] %>% as.character())
+          }
         
       }
       rm(i,j,Folder,GeneExp.df,Data.SeuObj)
