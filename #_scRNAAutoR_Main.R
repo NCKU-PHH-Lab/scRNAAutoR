@@ -7,6 +7,9 @@
   library(SeuratData)
   library(patchwork)
   library(ggplot2)
+  library(ggpmisc)
+  library(broom)
+  
   library("stringr")
   library("magrittr")
   library("dplyr")
