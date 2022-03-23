@@ -82,15 +82,26 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
         Cell_density.NGenes.Plot
         
         # Visualize the distribution of genes detected per cell via boxplot
-        metadata$nUMI <- as.numeric(metadata$nUMI)
-        metadata$nGene <- as.numeric(metadata$nGene)
-        metadata$mitoRatio <- as.numeric(metadata$mitoRatio)
+        metadata %>% 
+          ggplot(aes(x = metadata[,3+NAno], y=log10(nGene), fill = metadata[,3+NAno])) + 
+          geom_boxplot() + 
+          theme_classic() +
+          theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),aspect.ratio=1) +
+          theme(plot.title = element_text(hjust=0.5, face="bold")) +
+          ggtitle("NCells vs NGenes") +
+          labs(fill=colnames(metadata)[3+NAno],
+               colour=colnames(metadata)[3+NAno]) ->  NCvsNG.BarPlot
         
+        NCvsNG.BarPlot
+        
+        
+        ## UMIs vs. genes detected
+        
+        # Visualize the correlation between genes detected and number of UMIs and determine whether strong presence of cells with low numbers of genes/UMIs
         metadata %>% 
           ggplot(aes(x=nUMI, y=nGene, color=mitoRatio)) + 
           geom_point() + 
-          scale_colour_continuous(limits = c(0, 1),low = "gray90", high = "black") +
-          #scale_colour_gradient(low = "gray90", high = "black") +
+          scale_colour_gradient(low = "gray90", high = "black") +
           stat_smooth(method=lm) +
           scale_x_log10() + 
           scale_y_log10() + 
@@ -106,12 +117,12 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
                 axis.title.y = element_text(color="black", size=20, face="bold"),
                 axis.text.x=element_text(size=14, face="bold"),
                 axis.text.y=element_text(size=14, face="bold")) +
-          facet_wrap(~sample)+
+          facet_wrap(colnames(metadata)[3+NAno])+
           theme(strip.text.x = element_text(size=17, color="black",
                                             face="bold.italic")) -> FSplot
         
         FSplot
-        
+
         # Add p-Value and r-Value
         # https://stackoverflow.com/questions/39335005/add-p-value-and-r-on-ggplot-follow-up
         # https://stackoverflow.com/questions/39333151/add-p-value-and-r2-ggplot-follow-up
@@ -131,7 +142,6 @@ scRNAQC <- function(PBMC.combined, nUMIFilter= 500, nGeneFilter = 250 ,
                           label.y.npc = 0.4, 
                           size = 5)
         FSplot2
-        
         
         
         ## Mitochondrial counts ratio
