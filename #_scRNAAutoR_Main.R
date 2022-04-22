@@ -726,7 +726,8 @@ save.image(paste0(Save.Path,"/06_Cell_type_annotation.RData"))
                                         XtextSize=18,  YtextSize=,18, xangle = 90,
                                         LegTextSize = 15)  + 
             theme(panel.border = element_rect(fill=NA,color="black", size=2, linetype="solid")) +
-            labs(fill=colnames(Anno.df)[i]) -> BarPlot1_2
+            labs(fill=colnames(Anno.df)[i])+
+            labs(y="Proportion") -> BarPlot1_2
           print(BarPlot1_2)
           rm(BarPlot1_1,BarPlot1_2)
           
